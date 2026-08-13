@@ -9,4 +9,6 @@ public class CreateLostFoundRequest {
     @NotBlank private String title;
     @NotBlank private String description;
     private String imageUrl;
+    private String status;
+    private String claimedBy;
 }

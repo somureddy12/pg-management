@@ -188,7 +188,7 @@ export default function Meals() {
                     Selection window: {new Date(post.windowOpen).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })} — {new Date(post.windowClose).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
                   </div>
                 </div>
-                <button className="btn btn-outline btn-sm" style={{ color: 'var(--error)' }} onClick={() => handleDelete(post.id)}>Delete</button>
+                <button className="btn btn-outline btn-sm" title="Delete" style={{ color: 'var(--error)' }} onClick={() => handleDelete(post.id)}>🗑️</button>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 10 }}>
