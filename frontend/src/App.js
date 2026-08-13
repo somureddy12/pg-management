@@ -16,6 +16,8 @@ import TenantDetail from './pages/owner/TenantDetail';
 import RentManagement from './pages/owner/RentManagement';
 import Communications from './pages/owner/Communications';
 import FoodMenu from './pages/owner/FoodMenu';
+import OwnerMeals from './pages/owner/Meals';
+import TenantMeals from './pages/tenant/Meals';
 import Reports from './pages/owner/Reports';
 import Expenses from './pages/owner/Expenses';
 
@@ -61,6 +63,7 @@ function App() {
             <Route path="rent" element={<RentManagement />} />
             <Route path="communications" element={<Communications />} />
             <Route path="menu" element={<FoodMenu />} />
+            <Route path="meals" element={<OwnerMeals />} />
             <Route path="reports" element={<Reports />} />
             <Route path="expenses" element={<Expenses />} />
           </Route>
@@ -70,6 +73,7 @@ function App() {
             <Route index element={<TenantDashboard />} />
             <Route path="rent" element={<TenantRent />} />
             <Route path="menu" element={<TenantMenu />} />
+            <Route path="meals" element={<TenantMeals />} />
             <Route path="complaints" element={<TenantComplaints />} />
             <Route path="notices" element={<TenantNotices />} />
           </Route>

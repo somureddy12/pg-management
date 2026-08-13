@@ -6,7 +6,7 @@ const navItems = [
   { path: '/owner/floors', label: 'Floors & Rooms', icon: '🏗️' },
   { path: '/owner/tenants', label: 'Tenants', icon: '👥' },
   { path: '/owner/rent', label: 'Rent', icon: '💰' },
-  { path: '/owner/menu', label: 'Food Menu', icon: '🍽️' },
+  { path: '/owner/meals', label: 'Meals', icon: '🍱' },
   { path: '/owner/communications', label: 'Communications', icon: '📢' },
   { path: '/owner/expenses', label: 'Expenses', icon: '🧾' },
   { path: '/owner/reports', label: 'Reports', icon: '📈' },
