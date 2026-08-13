@@ -4,7 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 const navItems = [
   { path: '/tenant', label: 'My Room', icon: '🏠', end: true },
   { path: '/tenant/rent', label: 'Rent & Payments', icon: '💰' },
-  { path: '/tenant/menu', label: 'Food Menu', icon: '🍽️' },
+  { path: '/tenant/meals', label: 'Meals', icon: '🍱' },
   { path: '/tenant/complaints', label: 'Help & Complaints', icon: '🔧' },
   { path: '/tenant/notices', label: 'Notices', icon: '📢' },
 ];
