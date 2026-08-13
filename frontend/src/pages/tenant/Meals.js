@@ -87,11 +87,14 @@ export default function TenantMeals() {
     }
   };
 
+  const STANDARD_KEYS = ['BREAKFAST', 'LUNCH', 'DINNER'];
+
   // Build a map of mealType → post (or null if not posted)
   const postMap = {};
   MEAL_TYPES.forEach(mt => {
     postMap[mt.key] = posts.find(p => p.mealType === mt.key) || null;
   });
+  const customPosts = posts.filter(p => !STANDARD_KEYS.includes(p.mealType));
 
   const windowLabel = (post) => {
     const fmt = (dt) => new Date(dt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
@@ -175,7 +178,7 @@ export default function TenantMeals() {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                       {post.items.map(item => {
                         const isSelected = (selections[post.id] || new Set()).has(item.id);
-                        const canSelect = status === 'OPEN';
+                        const canSelect = status === 'OPEN' && !post.hasSubmitted;
                         return (
                           <button
                             key={item.id}
@@ -207,12 +210,17 @@ export default function TenantMeals() {
                       })}
                     </div>
 
-                    {/* Save button — only when window is open */}
-                    {status === 'OPEN' && (
+                    {/* Save button — only when window is open AND not yet submitted */}
+                    {status === 'OPEN' && !post.hasSubmitted && (
                       <button className="btn btn-primary" style={{ marginTop: 4 }}
                         onClick={() => saveSelection(post)} disabled={saving === post.id}>
                         {saving === post.id ? 'Saving...' : 'Save Selection'}
                       </button>
+                    )}
+                    {status === 'OPEN' && post.hasSubmitted && (
+                      <div style={{ fontSize: 12, color: '#22c55e', textAlign: 'center', fontWeight: 600 }}>
+                        ✅ Selection submitted
+                      </div>
                     )}
 
                     {status === 'EXPIRED' && (
@@ -232,6 +240,70 @@ export default function TenantMeals() {
             );
           })}
         </div>
+
+        {/* Custom meal posts */}
+        {customPosts.length > 0 && (
+          <div style={{ marginTop: 24 }}>
+            <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: 12, color: 'var(--gray-700)' }}>Other Meals</h3>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16 }}>
+              {customPosts.map(post => {
+                const status = getMealStatus(post);
+                const open = status === 'OPEN';
+                return (
+                  <div key={post.id} style={{
+                    borderRadius: 12, padding: 20, border: '2px solid',
+                    borderColor: open ? '#22c55e' : status === 'FUTURE' ? '#7c3aed' : 'var(--gray-200)',
+                    background: status === 'FUTURE' ? '#f5f3ff' : status === 'EXPIRED' ? 'var(--gray-50)' : '#fff',
+                    opacity: status === 'EXPIRED' ? 0.75 : 1,
+                    display: 'flex', flexDirection: 'column', gap: 12,
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontSize: 22 }}>✨</span>
+                        <span style={{ fontWeight: 700, fontSize: 16 }}>{post.mealType}</span>
+                      </div>
+                      <span className={`badge ${open ? 'badge-green' : status === 'FUTURE' ? 'badge-purple' : 'badge-gray'}`}>
+                        {status === 'FUTURE' ? 'UPCOMING' : status}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: 12, color: 'var(--gray-500)' }}>
+                      {windowLabel(post)}
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      {post.items.map(item => {
+                        const isSelected = (selections[post.id] || new Set()).has(item.id);
+                        const canSelect = open && !post.hasSubmitted;
+                        return (
+                          <button key={item.id} type="button" disabled={!canSelect}
+                            onClick={() => canSelect && toggleItem(post.id, item.id)}
+                            style={{ padding: '8px 12px', borderRadius: 8, textAlign: 'left',
+                              border: `1.5px solid ${isSelected ? '#7c3aed' : 'var(--gray-200)'}`,
+                              background: isSelected ? '#ede9fe' : 'transparent',
+                              cursor: canSelect ? 'pointer' : 'default', fontSize: 13,
+                              display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span>
+                              <span style={{ marginRight: 6 }}>{item.isVeg ? '🟢' : '🔴'}</span>
+                              {item.itemName}
+                            </span>
+                            {isSelected && <span style={{ color: '#7c3aed', fontSize: 12 }}>✓</span>}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {open && !post.hasSubmitted && (
+                      <button className="btn btn-primary" onClick={() => saveSelection(post)} disabled={saving === post.id}>
+                        {saving === post.id ? 'Saving...' : 'Save Selection'}
+                      </button>
+                    )}
+                    {open && post.hasSubmitted && (
+                      <div style={{ fontSize: 12, color: '#22c55e', textAlign: 'center', fontWeight: 600 }}>✅ Selection submitted</div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
       )}
     </div>
   );

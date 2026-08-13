@@ -58,8 +58,31 @@ public class MealPostServiceImpl implements MealPostService {
 
     @Override
     @Transactional
+    public MealPostResponse updateMealPost(String id, CreateMealPostRequest request) {
+        MealPost post = mealPostRepository.findById(id)
+            .orElseThrow(() -> new ResourceNotFoundException("MealPost", id));
+        if (request.getWindowClose().isBefore(request.getWindowOpen())) {
+            throw new BusinessException("Window close must be after window open");
+        }
+        // Clear selections first so item FK constraints don't block deletion
+        mealSelectionRepository.deleteAll(mealSelectionRepository.findByMealPostId(id));
+        post.setDate(request.getDate());
+        post.setMealType(request.getMealType());
+        post.setWindowOpen(request.getWindowOpen());
+        post.setWindowClose(request.getWindowClose());
+        post.getItems().clear();
+        List<MealPostItem> newItems = request.getItems().stream().map(i ->
+            MealPostItem.builder().mealPost(post).itemName(i.getItemName()).isVeg(i.isVeg()).build()
+        ).toList();
+        post.getItems().addAll(newItems);
+        return toOwnerResponse(mealPostRepository.save(post), Collections.emptyMap());
+    }
+
+    @Override
+    @Transactional
     public void deleteMealPost(String id) {
         if (!mealPostRepository.existsById(id)) throw new ResourceNotFoundException("MealPost", id);
+        mealSelectionRepository.deleteAll(mealSelectionRepository.findByMealPostId(id));
         mealPostRepository.deleteById(id);
     }
 
@@ -74,7 +97,7 @@ public class MealPostServiceImpl implements MealPostService {
             Optional<MealSelection> sel = mealSelectionRepository.findByTenantIdAndMealPostId(tenantId, post.getId());
             Set<String> myItemIds = sel.map(s -> s.getSelectedItems().stream()
                 .map(MealPostItem::getId).collect(Collectors.toSet())).orElse(Collections.emptySet());
-            return toTenantResponse(post, myItemIds);
+            return toTenantResponse(post, myItemIds, sel.isPresent());
         }).toList();
     }
 
@@ -94,9 +117,10 @@ public class MealPostServiceImpl implements MealPostService {
                 .filter(i -> request.getItemIds().contains(i.getId()))
                 .toList();
 
-        MealSelection selection = mealSelectionRepository
-            .findByTenantIdAndMealPostId(tenantId, post.getId())
-            .orElse(MealSelection.builder().tenant(tenant).mealPost(post).build());
+        if (mealSelectionRepository.findByTenantIdAndMealPostId(tenantId, post.getId()).isPresent()) {
+            throw new BusinessException("You have already submitted your meal selection");
+        }
+        MealSelection selection = MealSelection.builder().tenant(tenant).mealPost(post).build();
         selection.setSelectedItems(selected);
         mealSelectionRepository.save(selection);
     }
@@ -117,7 +141,7 @@ public class MealPostServiceImpl implements MealPostService {
             .items(items).build();
     }
 
-    private MealPostResponse toTenantResponse(MealPost post, Set<String> myItemIds) {
+    private MealPostResponse toTenantResponse(MealPost post, Set<String> myItemIds, boolean hasSubmitted) {
         LocalDateTime now = LocalDateTime.now();
         List<MealPostResponse.ItemResponse> items = post.getItems().stream().map(i ->
             MealPostResponse.ItemResponse.builder()
@@ -130,6 +154,7 @@ public class MealPostServiceImpl implements MealPostService {
             .date(post.getDate()).mealType(post.getMealType())
             .windowOpen(post.getWindowOpen()).windowClose(post.getWindowClose())
             .isOpen(!now.isBefore(post.getWindowOpen()) && !now.isAfter(post.getWindowClose()))
+            .hasSubmitted(hasSubmitted)
             .items(items).build();
     }
 }

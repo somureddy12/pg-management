@@ -18,6 +18,7 @@ public class MealPostResponse {
     private LocalDateTime windowOpen;
     private LocalDateTime windowClose;
     private boolean isOpen;
+    private Boolean hasSubmitted; // tenant view: true if tenant already saved a selection
     private List<ItemResponse> items;
 
     @Data @Builder @NoArgsConstructor @AllArgsConstructor

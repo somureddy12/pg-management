@@ -40,6 +40,15 @@ public class MealPostController {
         return ResponseEntity.ok(mealPostService.getMealPostsByDate(pgId, date != null ? date : LocalDate.now()));
     }
 
+    // Owner: edit a meal post
+    @PutMapping("/{id}")
+    @PreAuthorize("hasRole('OWNER')")
+    public ResponseEntity<MealPostResponse> updateMealPost(
+            @PathVariable String id,
+            @Valid @RequestBody CreateMealPostRequest request) {
+        return ResponseEntity.ok(mealPostService.updateMealPost(id, request));
+    }
+
     // Owner: delete a meal post
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('OWNER')")

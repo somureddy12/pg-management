@@ -10,6 +10,7 @@ import java.util.List;
 public interface MealPostService {
     MealPostResponse createMealPost(CreateMealPostRequest request);
     List<MealPostResponse> getMealPostsByDate(String pgId, LocalDate date);
+    MealPostResponse updateMealPost(String id, CreateMealPostRequest request);
     void deleteMealPost(String id);
 
     List<MealPostResponse> getTenantMealPosts(String tenantId, LocalDate date);

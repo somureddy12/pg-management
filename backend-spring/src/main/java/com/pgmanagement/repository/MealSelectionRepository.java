@@ -15,4 +15,6 @@ public interface MealSelectionRepository extends JpaRepository<MealSelection, St
 
     @Query("SELECT si.id, COUNT(s) FROM MealSelection s JOIN s.selectedItems si WHERE s.mealPost.id = :postId GROUP BY si.id")
     List<Object[]> countByItemForPost(@Param("postId") String postId);
+
+    List<MealSelection> findByMealPostId(String mealPostId);
 }
