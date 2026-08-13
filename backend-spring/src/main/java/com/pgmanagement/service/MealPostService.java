@@ -12,6 +12,6 @@ public interface MealPostService {
     List<MealPostResponse> getMealPostsByDate(String pgId, LocalDate date);
     void deleteMealPost(String id);
 
-    List<MealPostResponse> getTenantMealPosts(String tenantId);
+    List<MealPostResponse> getTenantMealPosts(String tenantId, LocalDate date);
     void submitSelection(String tenantId, MealSelectionRequest request);
 }

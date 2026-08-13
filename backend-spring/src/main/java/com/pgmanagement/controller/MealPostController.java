@@ -48,12 +48,13 @@ public class MealPostController {
         return ResponseEntity.noContent().build();
     }
 
-    // Tenant: get today's meal posts for their PG
+    // Tenant: get meal posts for their PG on a given date (defaults to today)
     @GetMapping("/my")
     @PreAuthorize("hasRole('TENANT')")
     public ResponseEntity<List<MealPostResponse>> getTenantMealPosts(
-            @AuthenticationPrincipal UserPrincipal principal) {
-        return ResponseEntity.ok(mealPostService.getTenantMealPosts(principal.getId()));
+            @AuthenticationPrincipal UserPrincipal principal,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        return ResponseEntity.ok(mealPostService.getTenantMealPosts(principal.getId(), date != null ? date : LocalDate.now()));
     }
 
     // Tenant: submit or update their meal selection

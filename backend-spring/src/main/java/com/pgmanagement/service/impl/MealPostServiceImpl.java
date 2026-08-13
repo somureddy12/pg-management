@@ -65,11 +65,11 @@ public class MealPostServiceImpl implements MealPostService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<MealPostResponse> getTenantMealPosts(String tenantId) {
+    public List<MealPostResponse> getTenantMealPosts(String tenantId, LocalDate date) {
         Tenant tenant = tenantRepository.findById(tenantId)
             .orElseThrow(() -> new ResourceNotFoundException("Tenant", tenantId));
         String pgId = tenant.getBed().getRoom().getFloor().getPgHouse().getId();
-        List<MealPost> posts = mealPostRepository.findByPgHouseIdAndDateOrderByWindowOpenAsc(pgId, LocalDate.now());
+        List<MealPost> posts = mealPostRepository.findByPgHouseIdAndDateOrderByWindowOpenAsc(pgId, date);
         return posts.stream().map(post -> {
             Optional<MealSelection> sel = mealSelectionRepository.findByTenantIdAndMealPostId(tenantId, post.getId());
             Set<String> myItemIds = sel.map(s -> s.getSelectedItems().stream()

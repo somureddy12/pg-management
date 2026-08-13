@@ -119,7 +119,9 @@ export default function Meals() {
               </div>
               <div className="form-group">
                 <label className="form-label">Date</label>
-                <input className="form-input" type="date" value={form.date} onChange={e => setForm(p => ({ ...p, date: e.target.value }))} required />
+                <input className="form-input" type="date" value={form.date}
+                  min={new Date().toISOString().split('T')[0]}
+                  onChange={e => setForm(p => ({ ...p, date: e.target.value }))} required />
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                 <div className="form-group">
