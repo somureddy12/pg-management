@@ -115,7 +115,7 @@ export default function Meals() {
   useEffect(() => {
     api.get('/owner/pg').then(r => {
       setPg(r.data);
-      if (r.data?.id) loadPosts(r.data.id, dateOptions[0].iso);
+      if (r.data?.id) loadPosts(r.data.id, dateOptions[1].iso);
     });
   }, []);
 
