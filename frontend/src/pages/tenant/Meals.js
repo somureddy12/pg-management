@@ -123,6 +123,7 @@ export default function TenantMeals() {
       {loading ? (
         <div className="loading"><div className="spinner" /></div>
       ) : (
+        <>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20 }}>
           {MEAL_TYPES.map(mt => {
             const post = postMap[mt.key];
@@ -304,6 +305,7 @@ export default function TenantMeals() {
             </div>
           </div>
         )}
+        </>
       )}
     </div>
   );
