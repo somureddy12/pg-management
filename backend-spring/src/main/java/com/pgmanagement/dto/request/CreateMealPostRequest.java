@@ -22,9 +22,6 @@ public class CreateMealPostRequest {
     private String mealType; // BREAKFAST, LUNCH, DINNER
 
     @NotNull
-    private LocalDateTime windowOpen;
-
-    @NotNull
     private LocalDateTime windowClose;
 
     @NotEmpty
@@ -34,6 +31,7 @@ public class CreateMealPostRequest {
     public static class ItemRequest {
         @NotBlank
         private String itemName;
-        private boolean isVeg = true;
+        private Boolean isVeg = true;
+        private Boolean isDefault = false;
     }
 }

@@ -15,4 +15,5 @@ public interface MealPostService {
 
     List<MealPostResponse> getTenantMealPosts(String tenantId, LocalDate date);
     void submitSelection(String tenantId, MealSelectionRequest request);
+    void saveDefault(String tenantId, MealSelectionRequest request);
 }

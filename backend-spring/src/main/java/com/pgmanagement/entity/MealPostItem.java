@@ -21,4 +21,7 @@ public class MealPostItem {
 
     @Builder.Default
     private Boolean isVeg = true;
+
+    @Builder.Default
+    private Boolean isDefault = Boolean.FALSE;
 }

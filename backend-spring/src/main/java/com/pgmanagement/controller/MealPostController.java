@@ -75,4 +75,14 @@ public class MealPostController {
         mealPostService.submitSelection(principal.getId(), request);
         return ResponseEntity.ok().build();
     }
+
+    // Tenant: save default selection for a meal post (auto-submitted on window expiry)
+    @PostMapping("/default")
+    @PreAuthorize("hasRole('TENANT')")
+    public ResponseEntity<Void> saveDefault(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @Valid @RequestBody MealSelectionRequest request) {
+        mealPostService.saveDefault(principal.getId(), request);
+        return ResponseEntity.ok().build();
+    }
 }

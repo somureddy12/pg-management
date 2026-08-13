@@ -27,6 +27,8 @@ public class MealPostResponse {
         private String itemName;
         private Boolean isVeg;
         private Integer selectionCount; // populated for owner view
+        private Integer defaultCount;   // populated for owner view
         private Boolean selectedByMe;   // populated for tenant view
+        private Boolean isDefault;      // populated for tenant view
     }
 }
