@@ -199,7 +199,7 @@ public class OwnerServiceImpl implements OwnerService {
         Floor floor = room.getFloor();
         return AdvanceBookingResponse.builder()
             .id(ab.getId()).bedId(bed.getId()).bedLabel(bed.getBedLabel())
-            .roomNumber(room.getRoomNumber()).floorNumber(floor.getNumber())
+            .roomNumber(room.getRoomNumber()).sharingType(room.getSharingType()).floorNumber(floor.getNumber())
             .tenantName(ab.getTenantName()).phone(ab.getPhone())
             .expectedJoin(ab.getExpectedJoin())
             .advancePaid(ab.getAdvancePaid()).notes(ab.getNotes()).status(ab.getStatus())

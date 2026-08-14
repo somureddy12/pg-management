@@ -22,9 +22,12 @@ export default function AddTenant() {
     api.get('/owner/pg').then(r => setPg(r.data));
   }, []);
 
+  const SHARING_LABEL = { 1: 'Single', 2: 'Double', 3: 'Triple', 4: 'Quadruple' };
+
   const floors = pg?.floors || [];
   const rooms = floors.find(f => f.id === form.selectedFloor)?.rooms || [];
-  const beds = rooms.find(r => r.id === form.selectedRoom)?.beds?.filter(b => b.status === 'VACANT') || [];
+  const selectedRoom = rooms.find(r => r.id === form.selectedRoom);
+  const beds = selectedRoom?.beds?.filter(b => b.status === 'VACANT') || [];
 
   const set = (key, val) => setForm(prev => ({ ...prev, [key]: val }));
 
@@ -105,6 +108,14 @@ export default function AddTenant() {
                     {beds.map(b => <option key={b.id} value={b.id}>Bed {b.bedLabel}</option>)}
                   </select>
                 </div>
+                {selectedRoom && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'var(--gray-50)', borderRadius: 8, fontSize: 13, color: 'var(--gray-600)' }}>
+                    <span>Sharing Type:</span>
+                    <span style={{ fontWeight: 600, color: 'var(--primary)' }}>
+                      {SHARING_LABEL[selectedRoom.sharingType] || `${selectedRoom.sharingType}-Sharing`}
+                    </span>
+                  </div>
+                )}
               </>
             )}
             <div className="form-grid">

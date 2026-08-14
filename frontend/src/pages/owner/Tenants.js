@@ -140,7 +140,7 @@ export default function Tenants() {
               <table>
                 <thead>
                   <tr>
-                    <th>Name</th><th>Room / Bed</th><th>Expected Join</th>
+                    <th>Name</th><th>Room / Bed</th><th>Sharing</th><th>Expected Join</th>
                     <th>Advance Paid</th><th>Notes</th><th>Status</th>
                   </tr>
                 </thead>
@@ -153,6 +153,9 @@ export default function Tenants() {
                       </td>
                       <td>Room {ab.roomNumber}, Bed {ab.bedLabel}<br />
                         <span style={{ fontSize: 12, color: 'var(--gray-500)' }}>Floor {ab.floorNumber}</span>
+                      </td>
+                      <td style={{ fontSize: 13 }}>
+                        {ab.sharingType ? (SHARING_LABEL[ab.sharingType] || `${ab.sharingType}-Sharing`) : '—'}
                       </td>
                       <td style={{ fontSize: 13 }}>{new Date(ab.expectedJoin).toLocaleDateString('en-IN')}</td>
                       <td>₹{ab.advancePaid?.toLocaleString()}</td>
