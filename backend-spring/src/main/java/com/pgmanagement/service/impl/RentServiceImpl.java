@@ -191,6 +191,8 @@ public class RentServiceImpl implements RentService {
             .dueDate(b.getDueDate()).createdAt(b.getCreatedAt())
             .tenantId(t.getId()).tenantName(t.getName()).tenantPhone(t.getPhone())
             .roomNumber(t.getBed().getRoom().getRoomNumber()).bedLabel(t.getBed().getBedLabel())
+            .sharingType(t.getBed().getRoom().getSharingType())
+            .floorNumber(t.getBed().getRoom().getFloor().getNumber())
             .payments(b.getPayments() == null ? List.of() :
                 b.getPayments().stream().map(p -> RentPaymentResponse.builder()
                     .id(p.getId()).amount(p.getAmount()).paymentDate(p.getPaymentDate())

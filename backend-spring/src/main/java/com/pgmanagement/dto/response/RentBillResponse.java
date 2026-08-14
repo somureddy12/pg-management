@@ -34,4 +34,6 @@ public class RentBillResponse {
     private String tenantPhone;
     private String roomNumber;
     private String bedLabel;
+    private Integer sharingType;
+    private Integer floorNumber;
 }
