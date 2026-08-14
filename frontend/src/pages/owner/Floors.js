@@ -1,8 +1,16 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import api from '../../utils/api';
 import toast from 'react-hot-toast';
 
+const SHARING_LABEL = { 1: '1 - Single', 2: '2 - Double', 3: '3 - Triple', 4: '4 - Quadruple' };
+
 export default function Floors() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const floorFilter  = searchParams.get('floor')   || '';
+  const sharingFilter = searchParams.get('sharing') || '';
+  const statusFilter  = searchParams.get('status')  || '';
+
   const [pg, setPg] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showAddFloor, setShowAddFloor] = useState(false);
@@ -32,6 +40,36 @@ export default function Floors() {
     return null;
   };
 
+  const setParam = (key, value) => {
+    const next = Object.fromEntries(searchParams.entries());
+    if (value) next[key] = value; else delete next[key];
+    setSearchParams(next);
+  };
+
+  // Unique sharing types across all rooms
+  const allSharings = [...new Set(
+    pg.floors?.flatMap(f => f.rooms?.map(r => r.sharingType) || []).filter(Boolean)
+  )].sort((a, b) => a - b);
+
+  // Apply filters
+  const filteredFloors = (pg.floors || [])
+    .filter(f => !floorFilter || String(f.number) === floorFilter)
+    .map(f => ({
+      ...f,
+      rooms: (f.rooms || []).filter(r => {
+        const matchSharing = !sharingFilter || String(r.sharingType) === sharingFilter;
+        const matchStatus = !statusFilter || (() => {
+          if (statusFilter === 'vacant') return r.beds.some(b => getBedStatus(b) === 'vacant');
+          if (statusFilter === 'full')   return r.beds.every(b => getBedStatus(b) !== 'vacant');
+          return true;
+        })();
+        return matchSharing && matchStatus;
+      }),
+    }))
+    .filter(f => f.rooms.length > 0 || !sharingFilter && !statusFilter);
+
+  const hasFilters = floorFilter || sharingFilter || statusFilter;
+
   return (
     <div>
       <div className="page-header">
@@ -40,6 +78,35 @@ export default function Floors() {
           <p className="page-subtitle">{pg.name}</p>
         </div>
         <button className="btn btn-primary" onClick={() => setShowAddFloor(true)}>+ Add Floor</button>
+      </div>
+
+      {/* Filters */}
+      <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
+        <select className="form-select" value={floorFilter} onChange={e => setParam('floor', e.target.value)}
+          style={{ maxWidth: 150, fontSize: 13 }}>
+          <option value="">All Floors</option>
+          {pg.floors?.map(f => (
+            <option key={f.id} value={f.number}>Floor {f.number}{f.label ? ` — ${f.label}` : ''}</option>
+          ))}
+        </select>
+        <select className="form-select" value={sharingFilter} onChange={e => setParam('sharing', e.target.value)}
+          style={{ maxWidth: 170, fontSize: 13 }}>
+          <option value="">All Sharing</option>
+          {allSharings.map(s => (
+            <option key={s} value={s}>{SHARING_LABEL[s] || `${s}-Sharing`}</option>
+          ))}
+        </select>
+        <select className="form-select" value={statusFilter} onChange={e => setParam('status', e.target.value)}
+          style={{ maxWidth: 160, fontSize: 13 }}>
+          <option value="">All Rooms</option>
+          <option value="vacant">Has Vacant Beds</option>
+          <option value="full">Fully Occupied</option>
+        </select>
+        {hasFilters && (
+          <button className="btn btn-outline btn-sm" onClick={() => setSearchParams({})}>
+            Clear Filters ✕
+          </button>
+        )}
       </div>
 
       <div className="legend" style={{ marginBottom: 20 }}>
@@ -53,7 +120,11 @@ export default function Floors() {
         <div className="empty-state"><p>No floors added yet. Click "Add Floor" to get started.</p></div>
       )}
 
-      {pg.floors?.map(floor => (
+      {filteredFloors.length === 0 && pg.floors?.length > 0 && (
+        <div className="empty-state"><p>No rooms match the selected filters.</p></div>
+      )}
+
+      {filteredFloors.map(floor => (
         <div key={floor.id} className="floor-section">
           <div className="floor-header">
             <span style={{ fontSize: 16 }}>🏢</span>
