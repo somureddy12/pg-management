@@ -113,10 +113,12 @@ export default function Meals() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    api.get('/owner/pg').then(r => {
-      setPg(r.data);
-      if (r.data?.id) loadPosts(r.data.id, dateOptions[1].iso);
-    });
+    api.get('/owner/pg')
+      .then(r => {
+        setPg(r.data);
+        if (r.data?.id) loadPosts(r.data.id, dateOptions[1].iso);
+      })
+      .catch(() => setLoading(false));
   }, []);
 
   const loadPosts = (pgId, date) => {
@@ -354,6 +356,16 @@ export default function Meals() {
         </div>
       </div>
 
+      {!loading && !pg && (
+        <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--gray-500)' }}>
+          <div style={{ fontSize: 40, marginBottom: 12 }}>🏠</div>
+          <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 6 }}>No PG set up yet</div>
+          <div style={{ fontSize: 13 }}>Go to <b>Dashboard</b> to create your PG first.</div>
+        </div>
+      )}
+
+      {pg && (
+        <>
       <div className="form-group" style={{ maxWidth: 300, marginBottom: 28 }}>
         <label className="form-label">Select Day</label>
         <select className="form-select" value={selectedDate} onChange={e => handleDateChange(e.target.value)}>
@@ -365,7 +377,7 @@ export default function Meals() {
 
       {loading ? <div className="loading"><div className="spinner" /></div> : (
         <>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20, marginBottom: 20, alignItems: 'start' }}>
+<div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20, marginBottom: 20, alignItems: 'start' }}>
             {STANDARD_TYPES.map(mt => {
               const post = postMap[mt.key];
               const status = getMealStatus(post);
@@ -432,6 +444,8 @@ export default function Meals() {
               + Post Custom Meal (Snacks, Tea Time, Special, etc.)
             </button>
           )}
+        </>
+      )}
         </>
       )}
     </div>
