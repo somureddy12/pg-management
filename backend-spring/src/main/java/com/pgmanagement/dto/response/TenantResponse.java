@@ -35,6 +35,7 @@ public class TenantResponse {
     private String bedLabel;
     private String roomId;
     private String roomNumber;
+    private Integer sharingType;
     private Integer floorNumber;
     private String floorLabel;
     private String pgId;

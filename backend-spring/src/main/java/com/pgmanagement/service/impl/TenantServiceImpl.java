@@ -135,7 +135,7 @@ public class TenantServiceImpl implements TenantService {
             .monthlyRent(t.getMonthlyRent()).securityDeposit(t.getSecurityDeposit())
             .status(t.getStatus()).createdAt(t.getCreatedAt())
             .bedId(bed.getId()).bedLabel(bed.getBedLabel())
-            .roomId(room.getId()).roomNumber(room.getRoomNumber())
+            .roomId(room.getId()).roomNumber(room.getRoomNumber()).sharingType(room.getSharingType())
             .floorNumber(floor.getNumber()).floorLabel(floor.getLabel())
             .pgId(pg.getId()).pgName(pg.getName());
 
