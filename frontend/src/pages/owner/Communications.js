@@ -1,9 +1,15 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import api from '../../utils/api';
 import toast from 'react-hot-toast';
 
+const VALID_TABS = ['notices', 'lostfound', 'complaints'];
+
 export default function Communications() {
-  const [tab, setTab] = useState('notices');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tab = VALID_TABS.includes(searchParams.get('tab'))
+    ? searchParams.get('tab')
+    : 'notices';
   const [pg, setPg] = useState(null);
   const [notices, setNotices] = useState([]);
   const [lostFound, setLostFound] = useState([]);
@@ -39,9 +45,9 @@ export default function Communications() {
       </div>
 
       <div className="tabs">
-        <div className={`tab ${tab === 'notices' ? 'active' : ''}`} onClick={() => setTab('notices')}>📢 Notices ({notices.length})</div>
-        <div className={`tab ${tab === 'lostfound' ? 'active' : ''}`} onClick={() => setTab('lostfound')}>🔍 Lost & Found ({lostFound.length})</div>
-        <div className={`tab ${tab === 'complaints' ? 'active' : ''}`} onClick={() => setTab('complaints')}>📝 Complaints ({complaints.filter(c => c.status !== 'RESOLVED').length} open)</div>
+        <div className={`tab ${tab === 'notices' ? 'active' : ''}`} onClick={() => setSearchParams({ tab: 'notices' })}>📢 Notices ({notices.length})</div>
+        <div className={`tab ${tab === 'lostfound' ? 'active' : ''}`} onClick={() => setSearchParams({ tab: 'lostfound' })}>🔍 Lost & Found ({lostFound.length})</div>
+        <div className={`tab ${tab === 'complaints' ? 'active' : ''}`} onClick={() => setSearchParams({ tab: 'complaints' })}>📝 Complaints ({complaints.filter(c => c.status !== 'RESOLVED').length} open)</div>
       </div>
 
       {tab === 'notices' && <NoticesTab notices={notices} pgId={pg?.id} onReload={reload} showForm={showForm} onCloseForm={() => setShowForm(false)} />}
