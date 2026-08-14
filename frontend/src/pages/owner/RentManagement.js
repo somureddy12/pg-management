@@ -219,8 +219,14 @@ export default function RentManagement() {
                         <button className="btn btn-success btn-sm" onClick={() => setPayModal(b)}>Pay</button>
                       )}
                       {b.status === 'PAID' && (
-                        <button className="btn btn-outline btn-sm"
-                          onClick={() => window.open(`http://localhost:8080/api/rent/receipt/${b.id}`, '_blank')}>
+                        <button className="btn btn-outline btn-sm" onClick={async () => {
+                          try {
+                            const res = await api.get(`/rent/receipt/${b.id}`, { responseType: 'blob' });
+                            const url = URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
+                            window.open(url, '_blank');
+                            URL.revokeObjectURL(url);
+                          } catch { toast.error('Failed to load receipt'); }
+                        }}>
                           🧾 Receipt
                         </button>
                       )}
