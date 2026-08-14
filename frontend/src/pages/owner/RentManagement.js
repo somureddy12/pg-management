@@ -6,14 +6,20 @@ import toast from 'react-hot-toast';
 const SHARING_LABEL = { 1: '1 - Single', 2: '2 - Double', 3: '3 - Triple', 4: '4 - Quadruple' };
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
-function downloadCSV(bills, month, year) {
+function downloadExcel(bills, month, year) {
   const monthLabel = MONTHS[month - 1];
-  const rows = [
-    ['Name', 'Phone', 'Floor', 'Room', 'Bed', 'Sharing', 'Month', 'Year', 'Total (₹)', 'Paid (₹)', 'Balance (₹)', 'Status', 'Payment Mode', 'Payment Date', 'Reference'],
-  ];
-  bills.forEach(b => {
-    const payment = b.payments?.[b.payments.length - 1]; // last payment
-    rows.push([
+  const headers = ['Name', 'Phone', 'Floor', 'Room', 'Bed', 'Sharing', 'Month', 'Year', 'Status', 'Payment Mode', 'Payment Date', 'Reference', 'Total (₹)', 'Paid (₹)', 'Balance (₹)'];
+
+  const cellStyle = 'border:1px solid #999;padding:6px 10px;font-size:13px;';
+  const headerStyle = `${cellStyle}background:#1e3a5f;color:#fff;font-weight:bold;`;
+  const paidStyle = `${cellStyle}color:#15803d;font-weight:600;`;
+
+  const headerRow = `<tr>${headers.map(h => `<th style="${headerStyle}">${h}</th>`).join('')}</tr>`;
+
+  const dataRows = bills.map(b => {
+    const payment = b.payments?.[b.payments.length - 1];
+    const isPaid = b.status === 'PAID';
+    const cells = [
       b.tenantName || '',
       b.tenantPhone || '',
       b.floorNumber != null ? `Floor ${b.floorNumber}` : '',
@@ -22,24 +28,47 @@ function downloadCSV(bills, month, year) {
       b.sharingType ? (SHARING_LABEL[b.sharingType] || `${b.sharingType}-Sharing`) : '',
       monthLabel,
       year,
-      b.totalAmount || 0,
-      b.paidAmount || 0,
-      (b.totalAmount - b.paidAmount) || 0,
       b.status || '',
       payment?.mode || '',
       payment?.paymentDate ? new Date(payment.paymentDate).toLocaleDateString('en-IN') : '',
       payment?.reference || '',
-    ]);
-  });
+      b.totalAmount || 0,
+      b.paidAmount || 0,
+      (b.totalAmount - b.paidAmount) || 0,
+    ];
+    return `<tr>${cells.map((cell, i) => {
+      const style = (isPaid && i === 8) ? paidStyle : cellStyle;
+      return `<td style="${style}">${cell}</td>`;
+    }).join('')}</tr>`;
+  }).join('');
 
-  const csv = rows.map(r => r.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const totalCollected = bills.reduce((s, b) => s + (b.paidAmount || 0), 0);
+  const totalRemaining = bills.reduce((s, b) => s + ((b.totalAmount || 0) - (b.paidAmount || 0)), 0);
+  const totalStyle = `${cellStyle}background:#f0f4ff;font-weight:bold;`;
+  const totalGreenStyle = `${totalStyle}color:#15803d;`;
+  const totalRedStyle = `${totalStyle}color:#dc2626;`;
+  const numCols = headers.length;
+  const totalsRow = `<tr>
+    <td colspan="12" style="${totalStyle}">TOTAL (${bills.length} tenants)</td>
+    <td style="${totalStyle}">${bills.reduce((s,b)=>s+(b.totalAmount||0),0)}</td>
+    <td style="${totalGreenStyle}">${totalCollected}</td>
+    <td style="${totalRedStyle}">${totalRemaining}</td>
+  </tr>`;
+
+  const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+<head><meta charset="UTF-8"><style>table{border-collapse:collapse;}</style></head>
+<body>
+<h3 style="font-family:Arial;color:#1e3a5f;">Rent Report — ${monthLabel} ${year}</h3>
+<table style="border-collapse:collapse;font-family:Arial;">${headerRow}${dataRows}${totalsRow}</table>
+</body></html>`;
+
+  const blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `rent_${monthLabel}_${year}.csv`;
+  a.download = `rent_${monthLabel}_${year}.xls`;
   a.click();
-  URL.revokeObjectURL(url);
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
 }
 
 export default function RentManagement() {
@@ -101,8 +130,9 @@ export default function RentManagement() {
     return matchSearch && matchStatus && matchSharing && matchFloor;
   });
 
-  const totalCollected = filtered.reduce((s, b) => s + b.paidAmount, 0);
-  const totalPending   = filtered.reduce((s, b) => s + (b.totalAmount - b.paidAmount), 0);
+  const totalCollected  = filtered.reduce((s, b) => s + b.paidAmount, 0);
+  const totalPending    = filtered.reduce((s, b) => s + (b.totalAmount - b.paidAmount), 0);
+  const totalBillAmount = filtered.reduce((s, b) => s + (b.totalAmount || 0), 0);
   const paidCount      = filtered.filter(b => b.status === 'PAID').length;
   const unpaidCount    = filtered.filter(b => b.status === 'UNPAID').length;
   const partialCount   = filtered.filter(b => b.status === 'PARTIAL').length;
@@ -126,8 +156,8 @@ export default function RentManagement() {
             {generating ? 'Generating...' : '⚡ Auto-Generate Bills'}
           </button>
           {filtered.length > 0 && (
-            <button className="btn btn-outline" onClick={() => downloadCSV(filtered, month, year)}
-              title="Download as Excel / CSV">
+            <button className="btn btn-outline" onClick={() => downloadExcel(filtered, month, year)}
+              title="Download as Excel">
               ⬇ Export
             </button>
           )}
@@ -186,7 +216,7 @@ export default function RentManagement() {
               <thead>
                 <tr>
                   <th>Tenant</th><th>Floor / Room</th><th>Sharing</th>
-                  <th>Rent</th><th>Paid</th><th>Balance</th><th>Status</th><th>Actions</th>
+                  <th>Status</th><th>Total (₹)</th><th>Paid (₹)</th><th>Balance (₹)</th><th>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -204,15 +234,15 @@ export default function RentManagement() {
                     <td style={{ fontSize: 13 }}>
                       {b.sharingType ? (SHARING_LABEL[b.sharingType] || `${b.sharingType}-Sharing`) : '—'}
                     </td>
-                    <td>₹{b.totalAmount?.toLocaleString()}</td>
-                    <td style={{ color: 'var(--success)' }}>₹{b.paidAmount?.toLocaleString()}</td>
-                    <td style={{ color: b.totalAmount - b.paidAmount > 0 ? 'var(--danger)' : 'var(--gray-500)' }}>
-                      ₹{(b.totalAmount - b.paidAmount).toLocaleString()}
-                    </td>
                     <td>
                       <span className={`badge ${b.status === 'PAID' ? 'badge-green' : b.status === 'PARTIAL' ? 'badge-yellow' : 'badge-red'}`}>
                         {b.status}
                       </span>
+                    </td>
+                    <td>₹{b.totalAmount?.toLocaleString()}</td>
+                    <td style={{ color: 'var(--success)' }}>₹{b.paidAmount?.toLocaleString()}</td>
+                    <td style={{ color: b.totalAmount - b.paidAmount > 0 ? 'var(--danger)' : 'var(--gray-500)' }}>
+                      ₹{(b.totalAmount - b.paidAmount).toLocaleString()}
                     </td>
                     <td style={{ display: 'flex', gap: 6 }}>
                       {b.status !== 'PAID' && (
@@ -223,9 +253,15 @@ export default function RentManagement() {
                           try {
                             const res = await api.get(`/rent/receipt/${b.id}`, { responseType: 'blob' });
                             const url = URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
-                            window.open(url, '_blank');
-                            URL.revokeObjectURL(url);
-                          } catch { toast.error('Failed to load receipt'); }
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.target = '_blank';
+                            a.rel = 'noopener noreferrer';
+                            document.body.appendChild(a);
+                            a.click();
+                            document.body.removeChild(a);
+                            setTimeout(() => URL.revokeObjectURL(url), 10000);
+                          } catch (err) { toast.error('Failed to load receipt: ' + (err.response?.status || err.message)); }
                         }}>
                           🧾 Receipt
                         </button>
@@ -234,6 +270,15 @@ export default function RentManagement() {
                   </tr>
                 ))}
               </tbody>
+              <tfoot>
+                <tr style={{ fontWeight: 600, background: 'var(--gray-50)', borderTop: '2px solid var(--gray-200)' }}>
+                  <td colSpan={4} style={{ padding: '10px 12px', fontSize: 13 }}>Total ({filtered.length} tenants)</td>
+                  <td style={{ padding: '10px 12px' }}>₹{totalBillAmount.toLocaleString()}</td>
+                  <td style={{ padding: '10px 12px', color: 'var(--success)' }}>₹{totalCollected.toLocaleString()}</td>
+                  <td style={{ padding: '10px 12px', color: totalPending > 0 ? 'var(--danger)' : 'var(--gray-500)' }}>₹{totalPending.toLocaleString()}</td>
+                  <td></td>
+                </tr>
+              </tfoot>
             </table>
           </div>
         )}

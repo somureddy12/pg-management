@@ -25,6 +25,7 @@ export default function Tenants() {
   const [pg, setPg] = useState(null);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [editBooking, setEditBooking] = useState(null);
 
   useEffect(() => {
     api.get('/owner/pg').then(r => {
@@ -141,7 +142,7 @@ export default function Tenants() {
                 <thead>
                   <tr>
                     <th>Name</th><th>Room / Bed</th><th>Sharing</th><th>Expected Join</th>
-                    <th>Advance Paid</th><th>Notes</th><th>Status</th>
+                    <th>Advance Paid</th><th>Notes</th><th>Status</th><th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -161,6 +162,17 @@ export default function Tenants() {
                       <td>₹{ab.advancePaid?.toLocaleString()}</td>
                       <td style={{ fontSize: 13, color: 'var(--gray-500)' }}>{ab.notes || '—'}</td>
                       <td><span className="badge badge-purple">ADVANCE BOOKED</span></td>
+                      <td style={{ display: 'flex', gap: 6 }}>
+                        <button className="btn btn-outline btn-sm" onClick={() => setEditBooking(ab)}>Edit</button>
+                        <button className="btn btn-danger btn-sm" onClick={async () => {
+                          if (!window.confirm(`Delete advance booking for ${ab.tenantName}?`)) return;
+                          try {
+                            await api.delete(`/owner/advance-booking/${ab.id}`);
+                            toast.success('Booking deleted');
+                            setAdvanceBookings(prev => prev.filter(b => b.id !== ab.id));
+                          } catch { toast.error('Failed to delete'); }
+                        }}>Delete</button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -225,6 +237,85 @@ export default function Tenants() {
             </table>
           </div>
         )}
+      </div>
+
+      {editBooking && (
+        <EditAdvanceBookingModal
+          booking={editBooking}
+          onClose={() => setEditBooking(null)}
+          onSaved={(updated) => {
+            setAdvanceBookings(prev => prev.map(b => b.id === updated.id ? updated : b));
+            setEditBooking(null);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+function EditAdvanceBookingModal({ booking, onClose, onSaved }) {
+  const [form, setForm] = useState({
+    tenantName: booking.tenantName,
+    phone: booking.phone,
+    expectedJoin: booking.expectedJoin,
+    advancePaid: booking.advancePaid ?? 0,
+    notes: booking.notes || '',
+  });
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const res = await api.put(`/owner/advance-booking/${booking.id}`, form);
+      toast.success('Booking updated');
+      onSaved(res.data);
+    } catch { toast.error('Failed to update'); }
+    finally { setLoading(false); }
+  };
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal" onClick={e => e.stopPropagation()}>
+        <div className="modal-header">
+          <h3>Edit Advance Booking</h3>
+          <button className="modal-close" onClick={onClose}>✕</button>
+        </div>
+        <form className="modal-body" onSubmit={handleSubmit}>
+          <div className="form-grid">
+            <div className="form-group">
+              <label className="form-label">Tenant Name</label>
+              <input className="form-input" value={form.tenantName}
+                onChange={e => setForm(f => ({ ...f, tenantName: e.target.value }))} required />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Phone</label>
+              <input className="form-input" value={form.phone}
+                onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} required />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Expected Join Date</label>
+              <input className="form-input" type="date" value={form.expectedJoin}
+                onChange={e => setForm(f => ({ ...f, expectedJoin: e.target.value }))} required />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Advance Paid (₹)</label>
+              <input className="form-input" type="number" min="0" value={form.advancePaid}
+                onChange={e => setForm(f => ({ ...f, advancePaid: e.target.value }))} />
+            </div>
+            <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+              <label className="form-label">Notes</label>
+              <textarea className="form-input" rows={2} value={form.notes}
+                onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} />
+            </div>
+          </div>
+          <div className="modal-footer">
+            <button type="button" className="btn btn-outline" onClick={onClose}>Cancel</button>
+            <button type="submit" className="btn btn-primary" disabled={loading}>
+              {loading ? 'Saving...' : 'Save Changes'}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );

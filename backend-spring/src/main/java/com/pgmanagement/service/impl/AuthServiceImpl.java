@@ -5,6 +5,7 @@ import com.pgmanagement.dto.request.OwnerRegisterRequest;
 import com.pgmanagement.dto.response.AuthResponse;
 import com.pgmanagement.entity.Owner;
 import com.pgmanagement.entity.Tenant;
+import java.util.List;
 import com.pgmanagement.exception.BusinessException;
 import com.pgmanagement.exception.ResourceNotFoundException;
 import com.pgmanagement.repository.OwnerRepository;
@@ -67,8 +68,9 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional(readOnly = true)
     public AuthResponse loginTenant(LoginRequest request) {
-        Tenant tenant = tenantRepository.findByPhone(request.getIdentifier())
-            .orElseThrow(() -> new ResourceNotFoundException("Tenant not found with phone: " + request.getIdentifier()));
+        List<Tenant> matches = tenantRepository.findActiveByPhone(request.getIdentifier());
+        if (matches.isEmpty()) throw new ResourceNotFoundException("Tenant not found with phone: " + request.getIdentifier());
+        Tenant tenant = matches.get(0);
         String token = jwtUtil.generateToken(tenant.getId(), "TENANT");
         return buildAuthResponse(token, tenant.getId(), tenant.getName(), tenant.getEmail(), tenant.getPhone(), "TENANT");
     }

@@ -13,7 +13,8 @@ import java.util.Optional;
 @Repository
 public interface TenantRepository extends JpaRepository<Tenant, String> {
 
-    Optional<Tenant> findByPhone(String phone);
+    @Query("SELECT t FROM Tenant t WHERE t.phone = :phone AND t.status IN ('ACTIVE', 'NOTICE_PERIOD') ORDER BY t.joinDate DESC")
+    List<Tenant> findActiveByPhone(String phone);
 
     @Query("SELECT t FROM Tenant t WHERE t.bed.room.floor.pgHouse.id = :pgId")
     List<Tenant> findByPgId(String pgId);

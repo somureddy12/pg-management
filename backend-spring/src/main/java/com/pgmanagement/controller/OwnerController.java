@@ -3,6 +3,7 @@ package com.pgmanagement.controller;
 import com.pgmanagement.dto.request.AdvanceBookingRequest;
 import com.pgmanagement.dto.request.CreateFloorRequest;
 import com.pgmanagement.dto.request.CreatePgRequest;
+import com.pgmanagement.dto.request.UpdateAdvanceBookingRequest;
 import com.pgmanagement.dto.response.AdvanceBookingResponse;
 import com.pgmanagement.dto.response.DashboardResponse;
 import com.pgmanagement.dto.response.FloorResponse;
@@ -59,6 +60,19 @@ public class OwnerController {
     @GetMapping("/advance-bookings")
     public ResponseEntity<List<AdvanceBookingResponse>> getAdvanceBookings(@RequestParam String pgId) {
         return ResponseEntity.ok(ownerService.getAdvanceBookings(pgId));
+    }
+
+    @PutMapping("/advance-booking/{id}")
+    public ResponseEntity<AdvanceBookingResponse> updateAdvanceBooking(
+            @PathVariable String id,
+            @Valid @RequestBody UpdateAdvanceBookingRequest request) {
+        return ResponseEntity.ok(ownerService.updateAdvanceBooking(id, request));
+    }
+
+    @DeleteMapping("/advance-booking/{id}")
+    public ResponseEntity<Void> deleteAdvanceBooking(@PathVariable String id) {
+        ownerService.deleteAdvanceBooking(id);
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/health")

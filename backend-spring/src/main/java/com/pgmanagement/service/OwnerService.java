@@ -3,6 +3,7 @@ package com.pgmanagement.service;
 import com.pgmanagement.dto.request.AdvanceBookingRequest;
 import com.pgmanagement.dto.request.CreateFloorRequest;
 import com.pgmanagement.dto.request.CreatePgRequest;
+import com.pgmanagement.dto.request.UpdateAdvanceBookingRequest;
 import com.pgmanagement.dto.response.AdvanceBookingResponse;
 import com.pgmanagement.dto.response.DashboardResponse;
 import com.pgmanagement.dto.response.FloorResponse;
@@ -17,4 +18,6 @@ public interface OwnerService {
     FloorResponse addFloor(CreateFloorRequest request);
     AdvanceBookingResponse createAdvanceBooking(AdvanceBookingRequest request);
     List<AdvanceBookingResponse> getAdvanceBookings(String pgId);
+    AdvanceBookingResponse updateAdvanceBooking(String id, UpdateAdvanceBookingRequest request);
+    void deleteAdvanceBooking(String id);
 }

@@ -91,6 +91,7 @@ public class RentServiceImpl implements RentService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public void generateReceipt(String billId, HttpServletResponse response) throws IOException {
         RentBill bill = rentBillRepository.findById(billId)
             .orElseThrow(() -> new ResourceNotFoundException("RentBill", billId));
@@ -118,7 +119,7 @@ public class RentServiceImpl implements RentService {
             Paragraph pgName = new Paragraph(pg.getName(), titleFont);
             pgName.setAlignment(Element.ALIGN_CENTER);
             doc.add(pgName);
-            Paragraph addr = new Paragraph(pg.getAddress(), smallFont);
+            Paragraph addr = new Paragraph(pg.getAddress() != null ? pg.getAddress() : "", smallFont);
             addr.setAlignment(Element.ALIGN_CENTER);
             doc.add(addr);
             doc.add(new Paragraph(" "));

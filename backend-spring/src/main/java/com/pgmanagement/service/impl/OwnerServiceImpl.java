@@ -3,6 +3,7 @@ package com.pgmanagement.service.impl;
 import com.pgmanagement.dto.request.AdvanceBookingRequest;
 import com.pgmanagement.dto.request.CreateFloorRequest;
 import com.pgmanagement.dto.request.CreatePgRequest;
+import com.pgmanagement.dto.request.UpdateAdvanceBookingRequest;
 import com.pgmanagement.dto.response.*;
 import com.pgmanagement.entity.*;
 import com.pgmanagement.enums.BedStatus;
@@ -144,7 +145,31 @@ public class OwnerServiceImpl implements OwnerService {
         return mapAdvanceBooking(booking);
     }
 
-    // â”€â”€â”€ Mappers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    @Override
+    @Transactional
+    public AdvanceBookingResponse updateAdvanceBooking(String id, UpdateAdvanceBookingRequest request) {
+        AdvanceBooking booking = advanceBookingRepository.findById(id)
+            .orElseThrow(() -> new ResourceNotFoundException("AdvanceBooking", id));
+        booking.setTenantName(request.getTenantName());
+        booking.setPhone(request.getPhone());
+        booking.setExpectedJoin(request.getExpectedJoin());
+        booking.setAdvancePaid(request.getAdvancePaid() != null ? request.getAdvancePaid() : BigDecimal.ZERO);
+        booking.setNotes(request.getNotes());
+        return mapAdvanceBooking(advanceBookingRepository.save(booking));
+    }
+
+    @Override
+    @Transactional
+    public void deleteAdvanceBooking(String id) {
+        AdvanceBooking booking = advanceBookingRepository.findById(id)
+            .orElseThrow(() -> new ResourceNotFoundException("AdvanceBooking", id));
+        Bed bed = booking.getBed();
+        advanceBookingRepository.delete(booking);
+        bed.setStatus(BedStatus.VACANT);
+        bedRepository.save(bed);
+    }
+
+    // â"€â"€â"€ Mappers â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 
     private PgHouseResponse mapPgToResponse(PgHouse pg) {
         List<FloorResponse> floorResponses = pg.getFloors() == null ? List.of() :
