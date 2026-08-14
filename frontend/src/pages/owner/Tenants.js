@@ -105,24 +105,20 @@ export default function Tenants() {
       </div>
 
       {/* Secondary filters — floor & sharing */}
-      {filter !== 'ADVANCE_BOOKED' && (floors.length > 0 || sharings.length > 0) && (
+      {filter !== 'ADVANCE_BOOKED' && (
         <div style={{ display: 'flex', gap: 10, marginBottom: 20, alignItems: 'center', flexWrap: 'wrap' }}>
-          {floors.length > 0 && (
-            <select className="form-select" value={floorFilter} onChange={e => setParam('floor', e.target.value)}
-              style={{ maxWidth: 150, fontSize: 13 }}>
-              <option value="">All Floors</option>
-              {floors.map(f => <option key={f} value={f}>Floor {f}</option>)}
-            </select>
-          )}
-          {sharings.length > 0 && (
-            <select className="form-select" value={sharingFilter} onChange={e => setParam('sharing', e.target.value)}
-              style={{ maxWidth: 160, fontSize: 13 }}>
-              <option value="">All Sharing</option>
-              {sharings.map(s => (
-                <option key={s} value={s}>{SHARING_LABEL[s] || `${s}-Sharing`}</option>
-              ))}
-            </select>
-          )}
+          <select className="form-select" value={floorFilter} onChange={e => setParam('floor', e.target.value)}
+            style={{ maxWidth: 150, fontSize: 13 }}>
+            <option value="">All Floors</option>
+            {floors.map(f => <option key={f} value={f}>Floor {f}</option>)}
+          </select>
+          <select className="form-select" value={sharingFilter} onChange={e => setParam('sharing', e.target.value)}
+            style={{ maxWidth: 160, fontSize: 13 }}>
+            <option value="">All Sharing</option>
+            {sharings.map(s => (
+              <option key={s} value={s}>{SHARING_LABEL[s] || `${s}-Sharing`}</option>
+            ))}
+          </select>
           {hasExtraFilters && (
             <button className="btn btn-outline btn-sm" onClick={() => {
               const next = Object.fromEntries(searchParams.entries());
