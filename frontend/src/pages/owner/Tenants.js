@@ -111,28 +111,44 @@ export default function Tenants() {
               <thead>
                 <tr>
                   <th>Tenant</th><th>Room / Bed</th><th>Join Date</th>
-                  <th>Rent</th><th>This Month</th><th>Status</th><th>Action</th>
+                  {filter === 'VACATED'
+                    ? <th>Vacated On</th>
+                    : <><th>Rent</th><th>This Month</th></>
+                  }
+                  <th>Status</th><th>Action</th>
                 </tr>
               </thead>
               <tbody>
                 {filtered.map(t => {
-                  const bill = t.rentBills?.[0];
+                  const bill = t.latestBill;
                   return (
                     <tr key={t.id}>
                       <td>
                         <div style={{ fontWeight: 600 }}>{t.name}</div>
                         <div style={{ fontSize: 12, color: 'var(--gray-500)' }}>{t.phone}</div>
                       </td>
-                      <td>Room {t.bed?.room?.roomNumber}, Bed {t.bed?.bedLabel}<br /><span style={{ fontSize: 12, color: 'var(--gray-500)' }}>Floor {t.bed?.room?.floor?.number}</span></td>
-                      <td style={{ fontSize: 13 }}>{new Date(t.joinDate).toLocaleDateString('en-IN')}</td>
-                      <td>₹{t.monthlyRent?.toLocaleString()}</td>
                       <td>
-                        {bill ? (
-                          <span className={`badge ${bill.status === 'PAID' ? 'badge-green' : bill.status === 'PARTIAL' ? 'badge-yellow' : 'badge-red'}`}>
-                            {bill.status}
-                          </span>
-                        ) : <span className="badge badge-gray">No bill</span>}
+                        Room {t.roomNumber}, Bed {t.bedLabel}
+                        <br />
+                        <span style={{ fontSize: 12, color: 'var(--gray-500)' }}>Floor {t.floorNumber}</span>
                       </td>
+                      <td style={{ fontSize: 13 }}>{new Date(t.joinDate).toLocaleDateString('en-IN')}</td>
+                      {filter === 'VACATED' ? (
+                        <td style={{ fontSize: 13 }}>
+                          {t.actualVacate ? new Date(t.actualVacate).toLocaleDateString('en-IN') : '—'}
+                        </td>
+                      ) : (
+                        <>
+                          <td>₹{t.monthlyRent?.toLocaleString()}</td>
+                          <td>
+                            {bill ? (
+                              <span className={`badge ${bill.status === 'PAID' ? 'badge-green' : bill.status === 'PARTIAL' ? 'badge-yellow' : 'badge-red'}`}>
+                                {bill.status}
+                              </span>
+                            ) : <span className="badge badge-gray">No bill</span>}
+                          </td>
+                        </>
+                      )}
                       <td><span className={`badge ${STATUS_BADGE[t.status]}`}>{t.status.replace('_', ' ')}</span></td>
                       <td><Link to={`/owner/tenants/${t.id}`} className="btn btn-outline btn-sm">View</Link></td>
                     </tr>
