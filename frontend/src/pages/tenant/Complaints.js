@@ -15,15 +15,21 @@ export default function TenantComplaints() {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ category: 'PLUMBING', description: '' });
   const [loading, setLoading] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [editForm, setEditForm] = useState({ category: 'PLUMBING', description: '' });
+
+  const reload = (id) => {
+    api.get(`/communications/complaints/${id}`).then(r =>
+      setComplaints(r.data.filter(c => c.tenantId === user.id))
+    );
+  };
 
   useEffect(() => {
     api.get('/tenants/me').then(r => {
-      const id = r.data?.bed?.room?.floor?.pg?.id;
-      const rId = r.data?.bed?.room?.id;
+      const id = r.data?.pgId;
+      const rId = r.data?.roomId;
       setPgId(id); setRoomId(rId);
-      if (id) api.get(`/communications/complaints/${id}`).then(r2 => {
-        setComplaints(r2.data.filter(c => c.tenantId === user.id));
-      });
+      if (id) reload(id);
     });
   }, []);
 
@@ -31,9 +37,35 @@ export default function TenantComplaints() {
     e.preventDefault(); setLoading(true);
     try {
       await api.post('/communications/complaints', { roomId, ...form });
-      toast.success('Complaint submitted!'); setShowForm(false);
-      api.get(`/communications/complaints/${pgId}`).then(r => setComplaints(r.data.filter(c => c.tenantId === user.id)));
-    } catch { toast.error('Failed'); } finally { setLoading(false); }
+      toast.success('Complaint submitted!');
+      setShowForm(false);
+      setForm({ category: 'PLUMBING', description: '' });
+      reload(pgId);
+    } catch { toast.error('Failed to submit'); } finally { setLoading(false); }
+  };
+
+  const handleEdit = (c) => {
+    setEditingId(c.id);
+    setEditForm({ category: c.category, description: c.description });
+  };
+
+  const handleEditSubmit = async (e) => {
+    e.preventDefault(); setLoading(true);
+    try {
+      await api.patch(`/communications/complaints/${editingId}/edit`, editForm);
+      toast.success('Complaint updated!');
+      setEditingId(null);
+      reload(pgId);
+    } catch { toast.error('Failed to update'); } finally { setLoading(false); }
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm('Delete this complaint?')) return;
+    try {
+      await api.delete(`/communications/complaints/${id}`);
+      toast.success('Complaint deleted');
+      reload(pgId);
+    } catch { toast.error('Failed to delete'); }
   };
 
   return (
@@ -67,31 +99,58 @@ export default function TenantComplaints() {
         {complaints.length === 0 && <div className="empty-state"><p>No complaints submitted yet.</p></div>}
         {complaints.map(c => (
           <div key={c.id} className="card">
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <span className={`badge ${STATUS_COLORS[c.status]}`}>{c.status}</span>
-                <span className="badge badge-gray">{c.category}</span>
-              </div>
-              <span style={{ fontSize: 12, color: 'var(--gray-400)' }}>{new Date(c.createdAt).toLocaleDateString('en-IN')}</span>
-            </div>
-            <p style={{ fontSize: 14, color: 'var(--gray-700)', marginBottom: 12 }}>{c.description}</p>
-            {/* Progress tracker */}
-            <div style={{ display: 'flex', gap: 0 }}>
-              {STATUS_STEPS.map((step, i) => {
-                const current = STATUS_STEPS.indexOf(c.status);
-                const done = i <= current;
-                return (
-                  <div key={step} style={{ flex: 1, textAlign: 'center', position: 'relative' }}>
-                    <div style={{ width: 20, height: 20, borderRadius: '50%', background: done ? 'var(--primary)' : 'var(--gray-200)', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1, position: 'relative' }}>
-                      {done && <span style={{ color: 'white', fontSize: 10 }}>✓</span>}
-                    </div>
-                    <div style={{ fontSize: 10, color: done ? 'var(--primary)' : 'var(--gray-400)', marginTop: 4 }}>{step.replace('_', ' ')}</div>
-                    {i < STATUS_STEPS.length - 1 && <div style={{ position: 'absolute', top: 10, left: '50%', width: '100%', height: 2, background: i < current ? 'var(--primary)' : 'var(--gray-200)', zIndex: 0 }} />}
+            {editingId === c.id ? (
+              <form onSubmit={handleEditSubmit}>
+                <h4 style={{ marginBottom: 12, fontWeight: 600 }}>Edit Complaint</h4>
+                <div className="form-group"><label className="form-label">Category</label>
+                  <select className="form-select" value={editForm.category} onChange={e => setEditForm({ ...editForm, category: e.target.value })}>
+                    {CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                  </select>
+                </div>
+                <div className="form-group"><label className="form-label">Description</label>
+                  <textarea className="form-textarea" value={editForm.description} onChange={e => setEditForm({ ...editForm, description: e.target.value })} required />
+                </div>
+                <div style={{ display: 'flex', gap: 12 }}>
+                  <button type="button" className="btn btn-outline btn-sm" onClick={() => setEditingId(null)}>Cancel</button>
+                  <button className="btn btn-primary btn-sm" disabled={loading}>{loading ? 'Saving...' : 'Save'}</button>
+                </div>
+              </form>
+            ) : (
+              <>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <span className={`badge ${STATUS_COLORS[c.status]}`}>{c.status}</span>
+                    <span className="badge badge-gray">{c.category}</span>
                   </div>
-                );
-              })}
-            </div>
-            {c.resolution && <div style={{ marginTop: 12, padding: 10, background: 'var(--success-light)', borderRadius: 8, fontSize: 13, color: '#065f46' }}>✅ Resolution: {c.resolution}</div>}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontSize: 12, color: 'var(--gray-400)' }}>{new Date(c.createdAt).toLocaleDateString('en-IN')}</span>
+                    {c.status === 'OPEN' && (
+                      <>
+                        <button className="btn btn-outline btn-sm" title="Edit" onClick={() => handleEdit(c)}>✏️</button>
+                        <button className="btn btn-outline btn-sm" title="Delete" style={{ color: 'var(--danger)' }} onClick={() => handleDelete(c.id)}>🗑️</button>
+                      </>
+                    )}
+                  </div>
+                </div>
+                <p style={{ fontSize: 14, color: 'var(--gray-700)', marginBottom: 12 }}>{c.description}</p>
+                <div style={{ display: 'flex', gap: 0 }}>
+                  {STATUS_STEPS.map((step, i) => {
+                    const current = STATUS_STEPS.indexOf(c.status);
+                    const done = i <= current;
+                    return (
+                      <div key={step} style={{ flex: 1, textAlign: 'center', position: 'relative' }}>
+                        <div style={{ width: 20, height: 20, borderRadius: '50%', background: done ? 'var(--primary)' : 'var(--gray-200)', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1, position: 'relative' }}>
+                          {done && <span style={{ color: 'white', fontSize: 10 }}>✓</span>}
+                        </div>
+                        <div style={{ fontSize: 10, color: done ? 'var(--primary)' : 'var(--gray-400)', marginTop: 4 }}>{step.replace('_', ' ')}</div>
+                        {i < STATUS_STEPS.length - 1 && <div style={{ position: 'absolute', top: 10, left: '50%', width: '100%', height: 2, background: i < current ? 'var(--primary)' : 'var(--gray-200)', zIndex: 0 }} />}
+                      </div>
+                    );
+                  })}
+                </div>
+                {c.resolution && <div style={{ marginTop: 12, padding: 10, background: 'var(--success-light)', borderRadius: 8, fontSize: 13, color: '#065f46' }}>✅ Resolution: {c.resolution}</div>}
+              </>
+            )}
           </div>
         ))}
       </div>

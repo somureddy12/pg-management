@@ -9,7 +9,7 @@ export default function TenantNotices() {
 
   useEffect(() => {
     api.get('/tenants/me').then(r => {
-      const pgId = r.data?.bed?.room?.floor?.pg?.id;
+      const pgId = r.data?.pgId;
       if (pgId) {
         Promise.all([
           api.get(`/communications/notices/${pgId}`),

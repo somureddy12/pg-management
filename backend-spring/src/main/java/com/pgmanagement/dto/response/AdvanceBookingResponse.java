@@ -15,6 +15,7 @@ public class AdvanceBookingResponse {
     private String bedId;
     private String bedLabel;
     private String roomNumber;
+    private Integer sharingType;
     private Integer floorNumber;
     private String tenantName;
     private String phone;

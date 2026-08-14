@@ -1,6 +1,7 @@
 package com.pgmanagement.service.impl;
 
 import com.pgmanagement.dto.request.AddTenantRequest;
+import com.pgmanagement.dto.request.UpdateTenantRequest;
 import com.pgmanagement.dto.request.VacateTenantRequest;
 import com.pgmanagement.dto.response.TenantResponse;
 import com.pgmanagement.entity.*;
@@ -46,6 +47,25 @@ public class TenantServiceImpl implements TenantService {
         bed.setStatus(BedStatus.OCCUPIED);
         bedRepository.save(bed);
         return mapToResponse(tenant, null);
+    }
+
+    @Override
+    @Transactional
+    public TenantResponse updateTenant(String id, UpdateTenantRequest request) {
+        Tenant tenant = tenantRepository.findById(id)
+            .orElseThrow(() -> new ResourceNotFoundException("Tenant", id));
+        tenant.setName(request.getName());
+        tenant.setPhone(request.getPhone());
+        tenant.setEmail(request.getEmail());
+        tenant.setEmergencyContact(request.getEmergencyContact());
+        tenant.setIdType(request.getIdType());
+        tenant.setIdNumber(request.getIdNumber());
+        tenant.setExpectedVacate(request.getExpectedVacate());
+        tenant.setMonthlyRent(request.getMonthlyRent());
+        if (request.getSecurityDeposit() != null) tenant.setSecurityDeposit(request.getSecurityDeposit());
+        tenantRepository.save(tenant);
+        List<RentBill> bills = rentBillRepository.findByTenantIdOrderByYearDescMonthDesc(id);
+        return mapToResponse(tenant, bills);
     }
 
     @Override
@@ -115,7 +135,7 @@ public class TenantServiceImpl implements TenantService {
             .monthlyRent(t.getMonthlyRent()).securityDeposit(t.getSecurityDeposit())
             .status(t.getStatus()).createdAt(t.getCreatedAt())
             .bedId(bed.getId()).bedLabel(bed.getBedLabel())
-            .roomId(room.getId()).roomNumber(room.getRoomNumber())
+            .roomId(room.getId()).roomNumber(room.getRoomNumber()).sharingType(room.getSharingType())
             .floorNumber(floor.getNumber()).floorLabel(floor.getLabel())
             .pgId(pg.getId()).pgName(pg.getName());
 

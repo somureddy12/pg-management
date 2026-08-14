@@ -1,6 +1,7 @@
 package com.pgmanagement.controller;
 
 import com.pgmanagement.dto.request.AddTenantRequest;
+import com.pgmanagement.dto.request.UpdateTenantRequest;
 import com.pgmanagement.dto.request.VacateTenantRequest;
 import com.pgmanagement.dto.response.TenantResponse;
 import com.pgmanagement.enums.TenantStatus;
@@ -51,6 +52,15 @@ public class TenantController {
     @PreAuthorize("hasRole('OWNER')")
     public ResponseEntity<TenantResponse> getTenant(@PathVariable String id) {
         return ResponseEntity.ok(tenantService.getTenantById(id));
+    }
+
+    /** Owner: update tenant details */
+    @PutMapping("/{id}")
+    @PreAuthorize("hasRole('OWNER')")
+    public ResponseEntity<TenantResponse> updateTenant(
+            @PathVariable String id,
+            @Valid @RequestBody UpdateTenantRequest request) {
+        return ResponseEntity.ok(tenantService.updateTenant(id, request));
     }
 
     /** Owner: mark tenant as vacated */

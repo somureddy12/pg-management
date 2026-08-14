@@ -83,6 +83,8 @@ public class CommunicationServiceImpl implements CommunicationService {
         // Used for claim: set status/claimedBy via request description field hack — or just expose dedicated fields
         if (request.getTitle() != null) item.setTitle(request.getTitle());
         if (request.getDescription() != null) item.setDescription(request.getDescription());
+        if (request.getStatus() != null) item.setStatus(request.getStatus());
+        if (request.getClaimedBy() != null) item.setClaimedBy(request.getClaimedBy());
         return mapLostFound(lostFoundRepository.save(item));
     }
 
@@ -115,6 +117,30 @@ public class CommunicationServiceImpl implements CommunicationService {
         complaint.setStatus(request.getStatus());
         if (request.getResolution() != null) complaint.setResolution(request.getResolution());
         return mapComplaint(complaintRepository.save(complaint));
+    }
+
+    @Override @Transactional
+    public ComplaintResponse editComplaint(String id, String tenantId, CreateComplaintRequest request) {
+        Complaint complaint = complaintRepository.findById(id)
+            .orElseThrow(() -> new ResourceNotFoundException("Complaint", id));
+        if (!complaint.getTenant().getId().equals(tenantId))
+            throw new RuntimeException("Not authorized to edit this complaint");
+        if (complaint.getStatus() != com.pgmanagement.enums.ComplaintStatus.OPEN)
+            throw new RuntimeException("Only OPEN complaints can be edited");
+        if (request.getCategory() != null) complaint.setCategory(request.getCategory());
+        if (request.getDescription() != null) complaint.setDescription(request.getDescription());
+        return mapComplaint(complaintRepository.save(complaint));
+    }
+
+    @Override @Transactional
+    public void deleteComplaint(String id, String tenantId) {
+        Complaint complaint = complaintRepository.findById(id)
+            .orElseThrow(() -> new ResourceNotFoundException("Complaint", id));
+        if (!complaint.getTenant().getId().equals(tenantId))
+            throw new RuntimeException("Not authorized to delete this complaint");
+        if (complaint.getStatus() != com.pgmanagement.enums.ComplaintStatus.OPEN)
+            throw new RuntimeException("Only OPEN complaints can be deleted");
+        complaintRepository.deleteById(id);
     }
 
     // ─── Mappers ──────────────────────────────────────────────────────────────

@@ -1,9 +1,15 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import api from '../../utils/api';
 import toast from 'react-hot-toast';
 
+const VALID_TABS = ['notices', 'lostfound', 'complaints'];
+
 export default function Communications() {
-  const [tab, setTab] = useState('notices');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tab = VALID_TABS.includes(searchParams.get('tab'))
+    ? searchParams.get('tab')
+    : 'notices';
   const [pg, setPg] = useState(null);
   const [notices, setNotices] = useState([]);
   const [lostFound, setLostFound] = useState([]);
@@ -39,9 +45,9 @@ export default function Communications() {
       </div>
 
       <div className="tabs">
-        <div className={`tab ${tab === 'notices' ? 'active' : ''}`} onClick={() => setTab('notices')}>📢 Notices ({notices.length})</div>
-        <div className={`tab ${tab === 'lostfound' ? 'active' : ''}`} onClick={() => setTab('lostfound')}>🔍 Lost & Found ({lostFound.length})</div>
-        <div className={`tab ${tab === 'complaints' ? 'active' : ''}`} onClick={() => setTab('complaints')}>📝 Complaints ({complaints.filter(c => c.status !== 'RESOLVED').length} open)</div>
+        <div className={`tab ${tab === 'notices' ? 'active' : ''}`} onClick={() => setSearchParams({ tab: 'notices' })}>📢 Notices ({notices.length})</div>
+        <div className={`tab ${tab === 'lostfound' ? 'active' : ''}`} onClick={() => setSearchParams({ tab: 'lostfound' })}>🔍 Lost & Found ({lostFound.length})</div>
+        <div className={`tab ${tab === 'complaints' ? 'active' : ''}`} onClick={() => setSearchParams({ tab: 'complaints' })}>📝 Complaints ({complaints.filter(c => c.status !== 'RESOLVED').length} open)</div>
       </div>
 
       {tab === 'notices' && <NoticesTab notices={notices} pgId={pg?.id} onReload={reload} showForm={showForm} onCloseForm={() => setShowForm(false)} />}
@@ -54,11 +60,24 @@ export default function Communications() {
 function NoticesTab({ notices, pgId, onReload, showForm, onCloseForm }) {
   const [form, setForm] = useState({ title: '', body: '', isPinned: false });
   const [loading, setLoading] = useState(false);
+  const [editingNotice, setEditingNotice] = useState(null);
+  const [editForm, setEditForm] = useState({ title: '', body: '', isPinned: false });
 
   const handleSubmit = async (e) => {
     e.preventDefault(); setLoading(true);
-    try { await api.post('/communications/notices', { ...form, pgId }); toast.success('Notice posted!'); onReload(); onCloseForm(); }
+    try { await api.post('/communications/notices', { ...form, pgId }); toast.success('Notice posted!'); onReload(); onCloseForm(); setForm({ title: '', body: '', isPinned: false }); }
     catch { toast.error('Failed'); } finally { setLoading(false); }
+  };
+
+  const handleEdit = (notice) => {
+    setEditingNotice(notice.id);
+    setEditForm({ title: notice.title, body: notice.body, isPinned: notice.isPinned });
+  };
+
+  const handleEditSubmit = async (e) => {
+    e.preventDefault(); setLoading(true);
+    try { await api.patch(`/communications/notices/${editingNotice}`, editForm); toast.success('Notice updated!'); setEditingNotice(null); onReload(); }
+    catch { toast.error('Failed to update'); } finally { setLoading(false); }
   };
 
   const deleteNotice = async (id) => {
@@ -93,20 +112,35 @@ function NoticesTab({ notices, pgId, onReload, showForm, onCloseForm }) {
         {notices.length === 0 && <div className="empty-state"><p>No notices posted yet.</p></div>}
         {notices.map(n => (
           <div key={n.id} className="card" style={{ borderLeft: n.isPinned ? '4px solid var(--primary)' : undefined }}>
-            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                  {n.isPinned && <span className="badge badge-blue">📌 Pinned</span>}
-                  <h4 style={{ fontSize: 15, fontWeight: 600 }}>{n.title}</h4>
+            {editingNotice === n.id ? (
+              <form onSubmit={handleEditSubmit}>
+                <div className="form-group"><label className="form-label">Title</label><input className="form-input" value={editForm.title} onChange={e => setEditForm({ ...editForm, title: e.target.value })} required /></div>
+                <div className="form-group"><label className="form-label">Message</label><textarea className="form-textarea" value={editForm.body} onChange={e => setEditForm({ ...editForm, body: e.target.value })} required /></div>
+                <div style={{ display: 'flex', gap: 12 }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14 }}>
+                    <input type="checkbox" checked={editForm.isPinned} onChange={e => setEditForm({ ...editForm, isPinned: e.target.checked })} /> Pin this notice
+                  </label>
+                  <button type="button" className="btn btn-outline btn-sm" onClick={() => setEditingNotice(null)}>Cancel</button>
+                  <button className="btn btn-primary btn-sm" disabled={loading}>{loading ? 'Saving...' : 'Save'}</button>
                 </div>
-                <p style={{ fontSize: 14, color: 'var(--gray-600)', marginBottom: 8 }}>{n.body}</p>
-                <span style={{ fontSize: 12, color: 'var(--gray-400)' }}>{new Date(n.createdAt).toLocaleDateString('en-IN')}</span>
+              </form>
+            ) : (
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                    {n.isPinned && <span className="badge badge-blue">📌 Pinned</span>}
+                    <h4 style={{ fontSize: 15, fontWeight: 600 }}>{n.title}</h4>
+                  </div>
+                  <p style={{ fontSize: 14, color: 'var(--gray-600)', marginBottom: 8 }}>{n.body}</p>
+                  <span style={{ fontSize: 12, color: 'var(--gray-400)' }}>{new Date(n.createdAt).toLocaleDateString('en-IN')}</span>
+                </div>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <button className="btn btn-outline btn-sm" title="Edit" onClick={() => handleEdit(n)}>✏️</button>
+                  <button className="btn btn-outline btn-sm" onClick={() => togglePin(n)}>{n.isPinned ? 'Unpin' : 'Pin'}</button>
+                  <button className="btn btn-outline btn-sm" title="Delete" style={{ color: 'var(--danger)' }} onClick={() => deleteNotice(n.id)}>🗑️</button>
+                </div>
               </div>
-              <div style={{ display: 'flex', gap: 6 }}>
-                <button className="btn btn-outline btn-sm" onClick={() => togglePin(n)}>{n.isPinned ? 'Unpin' : 'Pin'}</button>
-                <button className="btn btn-outline btn-sm" style={{ color: 'var(--danger)' }} onClick={() => deleteNotice(n.id)}>Delete</button>
-              </div>
-            </div>
+            )}
           </div>
         ))}
       </div>
@@ -187,7 +221,7 @@ function ComplaintsTab({ complaints, onReload }) {
               </div>
               <p style={{ fontSize: 14, color: 'var(--gray-700)', marginBottom: 6 }}>{c.description}</p>
               <div style={{ fontSize: 12, color: 'var(--gray-500)' }}>
-                {c.tenant?.name} · Room {c.room?.roomNumber} · {new Date(c.createdAt).toLocaleDateString('en-IN')}
+                {c.tenantName} · Room {c.roomNumber} · {new Date(c.createdAt).toLocaleDateString('en-IN')}
               </div>
               {c.resolution && <div style={{ fontSize: 13, marginTop: 8, padding: 8, background: 'var(--success-light)', borderRadius: 6, color: '#065f46' }}>✅ {c.resolution}</div>}
             </div>

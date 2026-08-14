@@ -9,26 +9,25 @@ export default function AddTenant() {
   const preselectedBedId = searchParams.get('bedId');
 
   const [pg, setPg] = useState(null);
-  const [mealPlans, setMealPlans] = useState([]);
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
     name: '', phone: '', email: '', emergencyContact: '',
     idType: 'AADHAAR', idNumber: '', joinDate: new Date().toISOString().split('T')[0],
     expectedVacate: '', monthlyRent: '', securityDeposit: '',
-    bedId: preselectedBedId || '', mealPlanId: '',
+    bedId: preselectedBedId || '',
     selectedFloor: '', selectedRoom: ''
   });
 
   useEffect(() => {
-    api.get('/owner/pg').then(r => {
-      setPg(r.data);
-      if (r.data?.id) api.get(`/menu/plans/${r.data.id}`).then(mp => setMealPlans(mp.data));
-    });
+    api.get('/owner/pg').then(r => setPg(r.data));
   }, []);
+
+  const SHARING_LABEL = { 1: '1 - Single', 2: '2 - Double', 3: '3 - Triple', 4: '4 - Quadruple' };
 
   const floors = pg?.floors || [];
   const rooms = floors.find(f => f.id === form.selectedFloor)?.rooms || [];
-  const beds = rooms.find(r => r.id === form.selectedRoom)?.beds?.filter(b => b.status === 'VACANT') || [];
+  const selectedRoom = rooms.find(r => r.id === form.selectedRoom);
+  const beds = selectedRoom?.beds?.filter(b => b.status === 'VACANT') || [];
 
   const set = (key, val) => setForm(prev => ({ ...prev, [key]: val }));
 
@@ -42,7 +41,6 @@ export default function AddTenant() {
         emergencyContact: form.emergencyContact, idType: form.idType, idNumber: form.idNumber,
         joinDate: form.joinDate, expectedVacate: form.expectedVacate || undefined,
         monthlyRent: parseFloat(form.monthlyRent), securityDeposit: parseFloat(form.securityDeposit) || 0,
-        mealPlanId: form.mealPlanId || undefined
       });
       toast.success('Tenant added successfully!');
       navigate('/owner/tenants');
@@ -110,6 +108,14 @@ export default function AddTenant() {
                     {beds.map(b => <option key={b.id} value={b.id}>Bed {b.bedLabel}</option>)}
                   </select>
                 </div>
+                {selectedRoom && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'var(--gray-50)', borderRadius: 8, fontSize: 13, color: 'var(--gray-600)' }}>
+                    <span>Sharing Type:</span>
+                    <span style={{ fontWeight: 600, color: 'var(--primary)' }}>
+                      {SHARING_LABEL[selectedRoom.sharingType] || `${selectedRoom.sharingType}-Sharing`}
+                    </span>
+                  </div>
+                )}
               </>
             )}
             <div className="form-grid">
@@ -127,16 +133,6 @@ export default function AddTenant() {
             </div>
           </div>
 
-          {/* Meal Plan */}
-          <div className="card">
-            <h3 className="card-title" style={{ marginBottom: 16 }}>🍽️ Meal Plan</h3>
-            <div className="form-group"><label className="form-label">Select Plan</label>
-              <select className="form-select" value={form.mealPlanId} onChange={e => set('mealPlanId', e.target.value)}>
-                <option value="">No meals</option>
-                {mealPlans.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-              </select>
-            </div>
-          </div>
         </div>
 
         <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', marginTop: 20 }}>

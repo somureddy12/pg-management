@@ -97,4 +97,24 @@ public class CommunicationsController {
             @Valid @RequestBody UpdateComplaintRequest request) {
         return ResponseEntity.ok(communicationService.updateComplaint(id, request));
     }
+
+    /** Tenant edits their own OPEN complaint */
+    @PatchMapping("/complaints/{id}/edit")
+    @PreAuthorize("hasRole('TENANT')")
+    public ResponseEntity<ComplaintResponse> editComplaint(
+            @PathVariable String id,
+            @AuthenticationPrincipal UserPrincipal principal,
+            @RequestBody CreateComplaintRequest request) {
+        return ResponseEntity.ok(communicationService.editComplaint(id, principal.getId(), request));
+    }
+
+    /** Tenant deletes their own OPEN complaint */
+    @DeleteMapping("/complaints/{id}")
+    @PreAuthorize("hasRole('TENANT')")
+    public ResponseEntity<Void> deleteComplaint(
+            @PathVariable String id,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        communicationService.deleteComplaint(id, principal.getId());
+        return ResponseEntity.noContent().build();
+    }
 }

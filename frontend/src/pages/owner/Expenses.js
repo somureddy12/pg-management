@@ -74,7 +74,7 @@ export default function Expenses() {
                     <td><span className="badge badge-gray">{e.category}</span></td>
                     <td>{e.description}</td>
                     <td style={{ fontWeight: 600 }}>₹{e.amount.toLocaleString()}</td>
-                    <td><button className="btn btn-outline btn-sm" style={{ color: 'var(--danger)' }} onClick={() => deleteExpense(e.id)}>Delete</button></td>
+                    <td><button className="btn btn-outline btn-sm" title="Delete" style={{ color: 'var(--danger)' }} onClick={() => deleteExpense(e.id)}>🗑️</button></td>
                   </tr>
                 ))}
               </tbody>

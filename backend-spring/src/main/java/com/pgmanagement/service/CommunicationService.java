@@ -22,4 +22,6 @@ public interface CommunicationService {
     ComplaintResponse createComplaint(String tenantId, CreateComplaintRequest request);
     List<ComplaintResponse> getComplaints(String pgId, ComplaintStatus status);
     ComplaintResponse updateComplaint(String id, UpdateComplaintRequest request);
+    ComplaintResponse editComplaint(String id, String tenantId, CreateComplaintRequest request);
+    void deleteComplaint(String id, String tenantId);
 }

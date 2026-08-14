@@ -11,7 +11,7 @@ export default function TenantDashboard() {
   useEffect(() => {
     api.get('/tenants/me').then(r => {
       setTenant(r.data);
-      const pgId = r.data?.bed?.room?.floor?.pg?.id;
+      const pgId = r.data?.pgId;
       if (pgId) {
         api.get(`/menu/today/${pgId}`).then(m => setTodayMenu(m.data));
         api.get(`/communications/notices/${pgId}`).then(n => setNotices(n.data.slice(0, 3)));
@@ -23,9 +23,6 @@ export default function TenantDashboard() {
   if (!tenant) return <div>Profile not found. Contact your PG owner.</div>;
 
   const latestBill = tenant.rentBills?.[0];
-  const room = tenant.bed?.room;
-  const floor = room?.floor;
-  const pg = floor?.pg;
 
   const MEAL_ICONS = { BREAKFAST: '🌅', LUNCH: '☀️', DINNER: '🌙' };
 
@@ -34,7 +31,7 @@ export default function TenantDashboard() {
       <div className="page-header">
         <div>
           <h1 className="page-title">Welcome, {tenant.name} 👋</h1>
-          <p className="page-subtitle">{pg?.name} · {pg?.address}</p>
+          <p className="page-subtitle">{tenant.pgName}</p>
         </div>
       </div>
 
@@ -42,8 +39,8 @@ export default function TenantDashboard() {
         <div className="stat-card">
           <div className="stat-icon" style={{ background: 'var(--primary-light)' }}>🏠</div>
           <div>
-            <div className="stat-value">Room {room?.roomNumber}</div>
-            <div className="stat-label">Floor {floor?.number} · Bed {tenant.bed?.bedLabel}</div>
+            <div className="stat-value">Room {tenant.roomNumber}</div>
+            <div className="stat-label">Floor {tenant.floorNumber} · Bed {tenant.bedLabel}</div>
           </div>
         </div>
         <div className="stat-card">
