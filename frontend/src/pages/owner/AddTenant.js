@@ -22,7 +22,7 @@ export default function AddTenant() {
     api.get('/owner/pg').then(r => setPg(r.data));
   }, []);
 
-  const SHARING_LABEL = { 1: 'Single', 2: 'Double', 3: 'Triple', 4: 'Quadruple' };
+  const SHARING_LABEL = { 1: '1 - Single', 2: '2 - Double', 3: '3 - Triple', 4: '4 - Quadruple' };
 
   const floors = pg?.floors || [];
   const rooms = floors.find(f => f.id === form.selectedFloor)?.rooms || [];

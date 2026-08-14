@@ -10,7 +10,7 @@ const STATUS_BADGE = {
 
 const VALID_STATUSES = ['ACTIVE', 'NOTICE_PERIOD', 'ADVANCE_BOOKED', 'VACATED', 'DEFAULTER'];
 
-const SHARING_LABEL = { 1: 'Single', 2: 'Double', 3: 'Triple', 4: 'Quadruple' };
+const SHARING_LABEL = { 1: '1 - Single', 2: '2 - Double', 3: '3 - Triple', 4: '4 - Quadruple' };
 
 export default function Tenants() {
   const [searchParams, setSearchParams] = useSearchParams();
