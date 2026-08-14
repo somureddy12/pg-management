@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import api from '../../utils/api';
 import toast from 'react-hot-toast';
 
@@ -8,20 +8,30 @@ const STATUS_BADGE = {
   ADVANCE_BOOKED: 'badge-purple', DEFAULTER: 'badge-red'
 };
 
+const VALID_STATUSES = ['ACTIVE', 'NOTICE_PERIOD', 'ADVANCE_BOOKED', 'VACATED', 'DEFAULTER'];
+
 export default function Tenants() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const filter = VALID_STATUSES.includes(searchParams.get('status'))
+    ? searchParams.get('status')
+    : 'ACTIVE';
+
   const [tenants, setTenants] = useState([]);
   const [advanceBookings, setAdvanceBookings] = useState([]);
   const [pg, setPg] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState('ACTIVE');
   const [search, setSearch] = useState('');
 
   useEffect(() => {
     api.get('/owner/pg').then(r => {
       setPg(r.data);
       if (r.data?.id) load(r.data.id, filter);
-    });
+    }).catch(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    if (pg?.id) load(pg.id, filter);
+  }, [filter]);
 
   const load = (pgId, status) => {
     setLoading(true);
@@ -38,7 +48,7 @@ export default function Tenants() {
     }
   };
 
-  const handleFilter = (s) => { setFilter(s); if (pg) load(pg.id, s); };
+  const handleFilter = (s) => setSearchParams({ status: s });
 
   const filtered = tenants.filter(t =>
     t.name.toLowerCase().includes(search.toLowerCase()) ||
