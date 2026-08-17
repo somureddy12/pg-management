@@ -77,6 +77,18 @@ public class RentServiceImpl implements RentService {
     }
 
     @Override
+    @Transactional
+    public RentBillResponse recordTenantPayment(String tenantId, RecordPaymentRequest request) {
+        RentBill bill = rentBillRepository.findById(request.getRentBillId())
+            .orElseThrow(() -> new ResourceNotFoundException("RentBill", request.getRentBillId()));
+        if (!bill.getTenant().getId().equals(tenantId))
+            throw new RuntimeException("Not authorized to pay this bill");
+        if (bill.getStatus() == RentStatus.PAID)
+            throw new RuntimeException("This bill is already fully paid");
+        return recordPayment(request);
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public List<RentBillResponse> getTenantHistory(String tenantId) {
         return rentBillRepository.findByTenantIdOrderByYearDescMonthDesc(tenantId)

@@ -82,7 +82,6 @@ export default function RentManagement() {
   const [bills, setBills] = useState([]);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
-  const [payModal, setPayModal] = useState(null);
 
   const now = new Date();
   const [month, setMonth] = useState(now.getMonth() + 1);
@@ -245,9 +244,6 @@ export default function RentManagement() {
                       ₹{(b.totalAmount - b.paidAmount).toLocaleString()}
                     </td>
                     <td style={{ display: 'flex', gap: 6 }}>
-                      {b.status !== 'PAID' && (
-                        <button className="btn btn-success btn-sm" onClick={() => setPayModal(b)}>Pay</button>
-                      )}
                       {b.status === 'PAID' && (
                         <button className="btn btn-outline btn-sm" onClick={async () => {
                           try {
@@ -284,59 +280,6 @@ export default function RentManagement() {
         )}
       </div>
 
-      {payModal && (
-        <PayModal bill={payModal} onClose={() => setPayModal(null)}
-          onSaved={() => { setPayModal(null); if (pg) loadBills(pg.id, month, year); }} />
-      )}
-    </div>
-  );
-}
-
-function PayModal({ bill, onClose, onSaved }) {
-  const [form, setForm] = useState({ amount: bill.totalAmount - bill.paidAmount, mode: 'CASH', reference: '', notes: '' });
-  const [loading, setLoading] = useState(false);
-  const handleSubmit = async (e) => {
-    e.preventDefault(); setLoading(true);
-    try {
-      await api.post('/rent/pay', { rentBillId: bill.id, amount: parseFloat(form.amount), mode: form.mode, reference: form.reference, notes: form.notes });
-      toast.success('Payment recorded!'); onSaved();
-    } catch { toast.error('Failed'); } finally { setLoading(false); }
-  };
-  return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" onClick={e => e.stopPropagation()}>
-        <div className="modal-header">
-          <h3 className="modal-title">Record Payment — {bill.tenantName}</h3>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer' }}>×</button>
-        </div>
-        <form onSubmit={handleSubmit}>
-          <div className="modal-body">
-            <div style={{ padding: 12, background: 'var(--gray-50)', borderRadius: 8, marginBottom: 16, fontSize: 14 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Total Bill</span><span>₹{bill.totalAmount}</span></div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Paid So Far</span><span>₹{bill.paidAmount}</span></div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 600, marginTop: 8 }}><span>Balance</span><span>₹{bill.totalAmount - bill.paidAmount}</span></div>
-            </div>
-            <div className="form-grid">
-              <div className="form-group"><label className="form-label">Amount (₹)</label>
-                <input className="form-input" type="number" value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })} required />
-              </div>
-              <div className="form-group"><label className="form-label">Payment Mode</label>
-                <select className="form-select" value={form.mode} onChange={e => setForm({ ...form, mode: e.target.value })}>
-                  <option value="CASH">Cash</option><option value="UPI">UPI</option>
-                  <option value="BANK_TRANSFER">Bank Transfer</option><option value="ONLINE">Online</option>
-                </select>
-              </div>
-            </div>
-            <div className="form-group"><label className="form-label">Reference / UTR</label>
-              <input className="form-input" placeholder="Optional" value={form.reference} onChange={e => setForm({ ...form, reference: e.target.value })} />
-            </div>
-          </div>
-          <div className="modal-footer">
-            <button type="button" className="btn btn-outline" onClick={onClose}>Cancel</button>
-            <button className="btn btn-success" disabled={loading}>{loading ? 'Recording...' : 'Record Payment'}</button>
-          </div>
-        </form>
-      </div>
     </div>
   );
 }

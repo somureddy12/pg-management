@@ -49,6 +49,15 @@ public class RentController {
         return ResponseEntity.ok(rentService.recordPayment(request));
     }
 
+    /** Tenant: self-record a payment against their own bill */
+    @PostMapping("/tenant/pay")
+    @PreAuthorize("hasRole('TENANT')")
+    public ResponseEntity<RentBillResponse> tenantPay(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @Valid @RequestBody RecordPaymentRequest request) {
+        return ResponseEntity.ok(rentService.recordTenantPayment(principal.getId(), request));
+    }
+
     /** Tenant or owner: full rent history for a tenant */
     @GetMapping("/tenant/{tenantId}")
     public ResponseEntity<List<RentBillResponse>> getTenantHistory(

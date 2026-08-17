@@ -12,6 +12,7 @@ public interface RentService {
     List<RentBillResponse> getBillsByMonthYear(String pgId, int month, int year);
     List<RentBillResponse> generateRent(GenerateRentRequest request);
     RentBillResponse recordPayment(RecordPaymentRequest request);
+    RentBillResponse recordTenantPayment(String tenantId, RecordPaymentRequest request);
     List<RentBillResponse> getTenantHistory(String tenantId);
     List<RentBillResponse> getDefaulters(String pgId);
     void generateReceipt(String billId, HttpServletResponse response) throws IOException;
