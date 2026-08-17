@@ -114,7 +114,16 @@ export default function TenantRent() {
 
               {bill.payments?.length > 0 && (
                 <div style={{ marginTop: 12 }}>
-                  <a href={`http://localhost:8080/api/rent/receipt/${bill.id}`} target="_blank" rel="noreferrer" className="btn btn-outline btn-sm">🧾 Download Receipt</a>
+                  <button className="btn btn-outline btn-sm" onClick={async () => {
+                    try {
+                      const res = await api.get(`/rent/receipt/${bill.id}`, { responseType: 'blob' });
+                      const url = URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
+                      const a = document.createElement('a');
+                      a.href = url; a.target = '_blank'; a.rel = 'noopener noreferrer';
+                      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+                      setTimeout(() => URL.revokeObjectURL(url), 10000);
+                    } catch { toast.error('Failed to download receipt'); }
+                  }}>🧾 Download Receipt</button>
                 </div>
               )}
             </div>
