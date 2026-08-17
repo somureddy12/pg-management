@@ -13,7 +13,8 @@ export default function TenantDashboard() {
       setTenant(r.data);
       const pgId = r.data?.pgId;
       if (pgId) {
-        api.get(`/menu/today/${pgId}`).then(m => setTodayMenu(m.data));
+        const today = new Date().toISOString().split('T')[0];
+        api.get(`/meals/my?date=${today}`).then(m => setTodayMenu(m.data));
         api.get(`/communications/notices/${pgId}`).then(n => setNotices(n.data.slice(0, 3)));
       }
     }).finally(() => setLoading(false));
@@ -95,17 +96,19 @@ export default function TenantDashboard() {
         <div className="card">
           <div className="card-header">
             <h3 className="card-title">Today's Menu</h3>
-            <Link to="/tenant/menu" style={{ fontSize: 13, color: 'var(--primary)' }}>Full week →</Link>
+            <Link to="/tenant/meals" style={{ fontSize: 13, color: 'var(--primary)' }}>Full week →</Link>
           </div>
           {todayMenu.length === 0 ? <p style={{ color: 'var(--gray-400)', fontSize: 14 }}>No menu set for today.</p> : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {todayMenu.map(item => (
-                <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', background: 'var(--gray-50)', borderRadius: 8 }}>
-                  <div>
-                    <div style={{ fontSize: 12, color: 'var(--gray-400)', marginBottom: 2 }}>{MEAL_ICONS[item.mealType]} {item.mealType}</div>
-                    <div style={{ fontSize: 14 }}>{item.items}</div>
-                  </div>
-                  <span style={{ fontSize: 12 }}>{item.isVeg ? '🟢' : '🔴'}</span>
+              {todayMenu.map(post => (
+                <div key={post.id} style={{ padding: '10px 12px', background: 'var(--gray-50)', borderRadius: 8 }}>
+                  <div style={{ fontSize: 12, color: 'var(--gray-400)', marginBottom: 6, fontWeight: 600 }}>{MEAL_ICONS[post.mealType]} {post.mealType}</div>
+                  {post.items?.map(item => (
+                    <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 14 }}>
+                      <span>{item.itemName}</span>
+                      <span>{item.isVeg ? '🟢' : '🔴'}</span>
+                    </div>
+                  ))}
                 </div>
               ))}
             </div>
