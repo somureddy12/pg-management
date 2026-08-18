@@ -1,6 +1,7 @@
 package com.pgmanagement.service.impl;
 
 import com.pgmanagement.dto.request.AddTenantRequest;
+import com.pgmanagement.dto.request.TenantVacateRequestDto;
 import com.pgmanagement.dto.request.UpdateTenantRequest;
 import com.pgmanagement.dto.request.VacateTenantRequest;
 import com.pgmanagement.dto.response.TenantResponse;
@@ -16,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 
 @Service
@@ -121,6 +123,59 @@ public class TenantServiceImpl implements TenantService {
         bedRepository.save(bed);
     }
 
+    @Override
+    @Transactional
+    public void submitVacateRequest(String tenantId, TenantVacateRequestDto req) {
+        Tenant tenant = tenantRepository.findById(tenantId)
+            .orElseThrow(() -> new ResourceNotFoundException("Tenant", tenantId));
+        if (tenant.getStatus() == TenantStatus.VACATED) {
+            throw new BusinessException("Tenant has already vacated");
+        }
+        tenant.setStatus(TenantStatus.NOTICE_PERIOD);
+        tenant.setExpectedVacate(req.getVacateDate());
+        tenant.setVacateType(req.getVacateType());
+        tenant.setVacateReason(req.getReason());
+        tenant.setVacateRequestDate(LocalDate.now());
+        tenantRepository.save(tenant);
+    }
+
+    @Override
+    @Transactional
+    public void updateVacateRequest(String tenantId, TenantVacateRequestDto req) {
+        Tenant tenant = tenantRepository.findById(tenantId)
+            .orElseThrow(() -> new ResourceNotFoundException("Tenant", tenantId));
+        if (tenant.getStatus() != TenantStatus.NOTICE_PERIOD) {
+            throw new BusinessException("No active vacate request found");
+        }
+        tenant.setExpectedVacate(req.getVacateDate());
+        tenant.setVacateType(req.getVacateType());
+        tenant.setVacateReason(req.getReason());
+        tenantRepository.save(tenant);
+    }
+
+    @Override
+    @Transactional
+    public void cancelVacateRequest(String tenantId) {
+        Tenant tenant = tenantRepository.findById(tenantId)
+            .orElseThrow(() -> new ResourceNotFoundException("Tenant", tenantId));
+        if (tenant.getStatus() != TenantStatus.NOTICE_PERIOD) {
+            throw new BusinessException("No active vacate request found");
+        }
+        tenant.setStatus(TenantStatus.ACTIVE);
+        tenant.setVacateType(null);
+        tenant.setVacateReason(null);
+        tenant.setVacateRequestDate(null);
+        tenant.setExpectedVacate(null);
+        tenantRepository.save(tenant);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<TenantResponse> getNoticePeriodTenants(String pgId) {
+        return tenantRepository.findByPgIdAndStatus(pgId, TenantStatus.NOTICE_PERIOD)
+            .stream().map(t -> mapToResponse(t, null)).toList();
+    }
+
     private TenantResponse mapToResponse(Tenant t, List<RentBill> bills) {
         Bed bed = t.getBed();
         Room room = bed.getRoom();
@@ -132,6 +187,7 @@ public class TenantServiceImpl implements TenantService {
             .emergencyContact(t.getEmergencyContact()).idType(t.getIdType()).idNumber(t.getIdNumber())
             .idProofUrl(t.getIdProofUrl()).photoUrl(t.getPhotoUrl())
             .joinDate(t.getJoinDate()).expectedVacate(t.getExpectedVacate()).actualVacate(t.getActualVacate())
+            .vacateType(t.getVacateType()).vacateReason(t.getVacateReason()).vacateRequestDate(t.getVacateRequestDate())
             .monthlyRent(t.getMonthlyRent()).securityDeposit(t.getSecurityDeposit())
             .status(t.getStatus()).createdAt(t.getCreatedAt())
             .bedId(bed.getId()).bedLabel(bed.getBedLabel())

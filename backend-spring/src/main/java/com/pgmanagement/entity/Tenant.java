@@ -49,6 +49,10 @@ public class Tenant {
     private LocalDate expectedVacate;
     private LocalDate actualVacate;
 
+    private String vacateType;        // CONFIRMED or TENTATIVE
+    private String vacateReason;
+    private LocalDate vacateRequestDate;
+
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal monthlyRent;
 

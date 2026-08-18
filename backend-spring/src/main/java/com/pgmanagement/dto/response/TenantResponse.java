@@ -25,6 +25,9 @@ public class TenantResponse {
     private LocalDate joinDate;
     private LocalDate expectedVacate;
     private LocalDate actualVacate;
+    private String vacateType;
+    private String vacateReason;
+    private LocalDate vacateRequestDate;
     private BigDecimal monthlyRent;
     private BigDecimal securityDeposit;
     private TenantStatus status;

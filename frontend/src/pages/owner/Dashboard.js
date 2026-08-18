@@ -3,12 +3,28 @@ import { Link } from 'react-router-dom';
 import api from '../../utils/api';
 import toast from 'react-hot-toast';
 
+function isAdvanceReturnable(vacateRequestDate, expectedVacate) {
+  if (!vacateRequestDate || !expectedVacate) return false;
+  const diff = (new Date(expectedVacate) - new Date(vacateRequestDate)) / (1000 * 60 * 60 * 24);
+  return diff >= 30;
+}
+
 export default function OwnerDashboard() {
   const [data, setData] = useState(null);
+  const [noticeTenants, setNoticeTenants] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.get('/owner/dashboard').then(r => setData(r.data)).catch(e => toast.error('Failed to load dashboard'))
+    api.get('/owner/dashboard')
+      .then(r => {
+        setData(r.data);
+        if (r.data?.pg?.id) {
+          api.get(`/tenants/notice-period?pgId=${r.data.pg.id}`)
+            .then(n => setNoticeTenants(n.data))
+            .catch(() => {});
+        }
+      })
+      .catch(() => toast.error('Failed to load dashboard'))
       .finally(() => setLoading(false));
   }, []);
 
@@ -104,6 +120,70 @@ export default function OwnerDashboard() {
             </div>
           )}
         </div>
+      </div>
+
+      {/* Notice Period Tenants */}
+      <div className="card" style={{ marginTop: 20 }}>
+        <div className="card-header">
+          <h3 className="card-title">🚪 Tenants on Notice Period</h3>
+          <span className="badge badge-yellow">{noticeTenants.length} tenant{noticeTenants.length !== 1 ? 's' : ''}</span>
+        </div>
+        {noticeTenants.length === 0 ? (
+          <p style={{ color: 'var(--gray-400)', fontSize: 14 }}>No tenants have submitted a vacate notice.</p>
+        ) : (
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
+              <thead>
+                <tr style={{ background: 'var(--gray-50)' }}>
+                  {['Tenant', 'Room / Bed', 'Type', 'Vacate Date', 'Notice Given', 'Advance (₹)', 'Refund?', 'Reason'].map(h => (
+                    <th key={h} style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 600, fontSize: 12, color: 'var(--gray-500)', textTransform: 'uppercase', borderBottom: '1px solid var(--gray-100)' }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {noticeTenants.map(t => {
+                  const returnable = isAdvanceReturnable(t.vacateRequestDate, t.expectedVacate);
+                  const noticeDays = t.vacateRequestDate && t.expectedVacate
+                    ? Math.floor((new Date(t.expectedVacate) - new Date(t.vacateRequestDate)) / (1000 * 60 * 60 * 24))
+                    : null;
+                  return (
+                    <tr key={t.id} style={{ borderBottom: '1px solid var(--gray-100)' }}>
+                      <td style={{ padding: '12px' }}>
+                        <div style={{ fontWeight: 600 }}>{t.name}</div>
+                        <div style={{ fontSize: 12, color: 'var(--gray-500)' }}>{t.phone}</div>
+                      </td>
+                      <td style={{ padding: '12px' }}>Room {t.roomNumber} · Bed {t.bedLabel}</td>
+                      <td style={{ padding: '12px' }}>
+                        <span className={`badge ${t.vacateType === 'CONFIRMED' ? 'badge-red' : 'badge-yellow'}`}>
+                          {t.vacateType === 'CONFIRMED' ? 'Confirmed' : 'Tentative'}
+                        </span>
+                      </td>
+                      <td style={{ padding: '12px', fontWeight: 600 }}>
+                        {t.expectedVacate ? new Date(t.expectedVacate).toLocaleDateString('en-IN') : '—'}
+                      </td>
+                      <td style={{ padding: '12px', color: 'var(--gray-600)' }}>
+                        {noticeDays !== null ? `${noticeDays} days` : '—'}
+                      </td>
+                      <td style={{ padding: '12px', fontWeight: 700, color: '#7c3aed' }}>
+                        ₹{t.securityDeposit?.toLocaleString() || 0}
+                      </td>
+                      <td style={{ padding: '12px' }}>
+                        {returnable
+                          ? <span style={{ color: '#15803d', fontWeight: 700, fontSize: 13 }}>✅ Yes</span>
+                          : <span style={{ color: '#b91c1c', fontWeight: 700, fontSize: 13 }}>❌ No</span>}
+                      </td>
+                      <td style={{ padding: '12px', color: 'var(--gray-600)', maxWidth: 200 }}>
+                        <span title={t.vacateReason} style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                          {t.vacateReason || '—'}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );

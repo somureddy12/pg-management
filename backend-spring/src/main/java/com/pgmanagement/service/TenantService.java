@@ -1,6 +1,7 @@
 package com.pgmanagement.service;
 
 import com.pgmanagement.dto.request.AddTenantRequest;
+import com.pgmanagement.dto.request.TenantVacateRequestDto;
 import com.pgmanagement.dto.request.UpdateTenantRequest;
 import com.pgmanagement.dto.request.VacateTenantRequest;
 import com.pgmanagement.dto.response.TenantResponse;
@@ -15,4 +16,10 @@ public interface TenantService {
     TenantResponse getMyProfile(String tenantId);
     List<TenantResponse> getTenantsByPg(String pgId, TenantStatus status);
     void vacateTenant(String tenantId, VacateTenantRequest request);
+
+    // Tenant self-service vacate
+    void submitVacateRequest(String tenantId, TenantVacateRequestDto req);
+    void updateVacateRequest(String tenantId, TenantVacateRequestDto req);
+    void cancelVacateRequest(String tenantId);
+    List<TenantResponse> getNoticePeriodTenants(String pgId);
 }

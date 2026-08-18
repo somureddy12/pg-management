@@ -1,6 +1,7 @@
 package com.pgmanagement.controller;
 
 import com.pgmanagement.dto.request.AddTenantRequest;
+import com.pgmanagement.dto.request.TenantVacateRequestDto;
 import com.pgmanagement.dto.request.UpdateTenantRequest;
 import com.pgmanagement.dto.request.VacateTenantRequest;
 import com.pgmanagement.dto.response.TenantResponse;
@@ -71,5 +72,41 @@ public class TenantController {
             @Valid @RequestBody VacateTenantRequest request) {
         tenantService.vacateTenant(id, request);
         return ResponseEntity.ok().build();
+    }
+
+    /** Tenant: submit a vacate request */
+    @PostMapping("/me/vacate-request")
+    @PreAuthorize("hasRole('TENANT')")
+    public ResponseEntity<Void> submitVacateRequest(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @Valid @RequestBody TenantVacateRequestDto request) {
+        tenantService.submitVacateRequest(principal.getId(), request);
+        return ResponseEntity.ok().build();
+    }
+
+    /** Tenant: update their existing vacate request */
+    @PutMapping("/me/vacate-request")
+    @PreAuthorize("hasRole('TENANT')")
+    public ResponseEntity<Void> updateVacateRequest(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @Valid @RequestBody TenantVacateRequestDto request) {
+        tenantService.updateVacateRequest(principal.getId(), request);
+        return ResponseEntity.ok().build();
+    }
+
+    /** Tenant: cancel their vacate request */
+    @DeleteMapping("/me/vacate-request")
+    @PreAuthorize("hasRole('TENANT')")
+    public ResponseEntity<Void> cancelVacateRequest(
+            @AuthenticationPrincipal UserPrincipal principal) {
+        tenantService.cancelVacateRequest(principal.getId());
+        return ResponseEntity.ok().build();
+    }
+
+    /** Owner: list all tenants currently in notice period */
+    @GetMapping("/notice-period")
+    @PreAuthorize("hasRole('OWNER')")
+    public ResponseEntity<List<TenantResponse>> getNoticePeriodTenants(@RequestParam String pgId) {
+        return ResponseEntity.ok(tenantService.getNoticePeriodTenants(pgId));
     }
 }
