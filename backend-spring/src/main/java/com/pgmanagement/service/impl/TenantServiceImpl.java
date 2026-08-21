@@ -7,6 +7,7 @@ import com.pgmanagement.dto.request.VacateTenantRequest;
 import com.pgmanagement.dto.response.TenantResponse;
 import com.pgmanagement.entity.*;
 import com.pgmanagement.enums.BedStatus;
+import com.pgmanagement.enums.RentStatus;
 import com.pgmanagement.enums.TenantStatus;
 import com.pgmanagement.exception.BusinessException;
 import com.pgmanagement.exception.ResourceNotFoundException;
@@ -63,10 +64,27 @@ public class TenantServiceImpl implements TenantService {
         tenant.setIdType(request.getIdType());
         tenant.setIdNumber(request.getIdNumber());
         tenant.setExpectedVacate(request.getExpectedVacate());
-        tenant.setMonthlyRent(request.getMonthlyRent());
+        BigDecimal newRent = request.getMonthlyRent();
+        boolean rentChanged = tenant.getMonthlyRent().compareTo(newRent) != 0;
+        tenant.setMonthlyRent(newRent);
         if (request.getSecurityDeposit() != null) tenant.setSecurityDeposit(request.getSecurityDeposit());
         tenantRepository.save(tenant);
         List<RentBill> bills = rentBillRepository.findByTenantIdOrderByYearDescMonthDesc(id);
+        if (rentChanged) {
+            List<RentBill> toUpdate = bills.stream()
+                .filter(b -> b.getStatus() == RentStatus.UNPAID || b.getStatus() == RentStatus.PARTIAL)
+                .toList();
+            toUpdate.forEach(b -> {
+                b.setRoomRent(newRent);
+                BigDecimal total = newRent
+                    .add(b.getMessCharges()   != null ? b.getMessCharges()   : BigDecimal.ZERO)
+                    .add(b.getElectricity()   != null ? b.getElectricity()   : BigDecimal.ZERO)
+                    .add(b.getLateFee()       != null ? b.getLateFee()       : BigDecimal.ZERO)
+                    .add(b.getOtherCharges()  != null ? b.getOtherCharges()  : BigDecimal.ZERO);
+                b.setTotalAmount(total);
+            });
+            rentBillRepository.saveAll(toUpdate);
+        }
         return mapToResponse(tenant, bills);
     }
 
