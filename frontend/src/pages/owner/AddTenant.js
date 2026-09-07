@@ -29,6 +29,18 @@ export default function AddTenant() {
   const selectedRoom = rooms.find(r => r.id === form.selectedRoom);
   const beds = selectedRoom?.beds?.filter(b => b.status === 'VACANT') || [];
 
+  // Resolve preselected bed details from pg data
+  const preselectedBedInfo = (() => {
+    if (!preselectedBedId || !pg) return null;
+    for (const floor of pg.floors || []) {
+      for (const room of floor.rooms || []) {
+        const bed = (room.beds || []).find(b => b.id === preselectedBedId);
+        if (bed) return { roomNumber: room.roomNumber, bedLabel: bed.bedLabel, sharingType: room.sharingType };
+      }
+    }
+    return null;
+  })();
+
   const set = (key, val) => setForm(prev => ({ ...prev, [key]: val }));
 
   const handleSubmit = async (e) => {
@@ -86,7 +98,14 @@ export default function AddTenant() {
             <h3 className="card-title" style={{ marginBottom: 16 }}>🛏️ Bed Assignment</h3>
             {preselectedBedId ? (
               <div style={{ padding: 12, background: 'var(--success-light)', borderRadius: 8, marginBottom: 16, color: '#065f46', fontSize: 14 }}>
-                ✅ Bed pre-selected from room view
+                ✅ Bed pre-selected
+                {preselectedBedInfo && (
+                  <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    <div><span style={{ fontWeight: 600 }}>Room:</span> {preselectedBedInfo.roomNumber}</div>
+                    <div><span style={{ fontWeight: 600 }}>Bed:</span> {preselectedBedInfo.bedLabel}</div>
+                    <div><span style={{ fontWeight: 600 }}>Type:</span> {SHARING_LABEL[preselectedBedInfo.sharingType] || `${preselectedBedInfo.sharingType}-Sharing`}</div>
+                  </div>
+                )}
               </div>
             ) : (
               <>

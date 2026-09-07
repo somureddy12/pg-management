@@ -16,6 +16,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/tenants")
@@ -108,5 +109,12 @@ public class TenantController {
     @PreAuthorize("hasRole('OWNER')")
     public ResponseEntity<List<TenantResponse>> getNoticePeriodTenants(@RequestParam String pgId) {
         return ResponseEntity.ok(tenantService.getNoticePeriodTenants(pgId));
+    }
+
+    /** Owner: get count of tenants grouped by status */
+    @GetMapping("/counts")
+    @PreAuthorize("hasRole('OWNER')")
+    public ResponseEntity<Map<String, Long>> getStatusCounts(@RequestParam String pgId) {
+        return ResponseEntity.ok(tenantService.getStatusCounts(pgId));
     }
 }

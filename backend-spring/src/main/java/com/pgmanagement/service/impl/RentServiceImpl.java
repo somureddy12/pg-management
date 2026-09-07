@@ -43,7 +43,7 @@ public class RentServiceImpl implements RentService {
     @Override
     @Transactional
     public List<RentBillResponse> generateRent(GenerateRentRequest request) {
-        List<Tenant> tenants = tenantRepository.findActiveTenantsByPgId(request.getPgId());
+        List<Tenant> tenants = tenantRepository.findByPgId(request.getPgId());
         List<RentBillResponse> generated = new ArrayList<>();
         for (Tenant tenant : tenants) {
             boolean exists = rentBillRepository.findByTenantIdAndMonthAndYear(

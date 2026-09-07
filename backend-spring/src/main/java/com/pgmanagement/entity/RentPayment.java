@@ -18,7 +18,9 @@ public class RentPayment {
     private String id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "rent_bill_id", nullable = false)
+    @JoinColumn(name = "rent_bill_id", nullable = false,
+                foreignKey = @ForeignKey(name = "fk_rentpayment_bill",
+                    foreignKeyDefinition = "FOREIGN KEY (rent_bill_id) REFERENCES rent_bills(id) ON DELETE CASCADE"))
     private RentBill rentBill;
 
     @Column(nullable = false, precision = 10, scale = 2)

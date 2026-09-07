@@ -4,6 +4,7 @@ import com.pgmanagement.dto.request.AdvanceBookingRequest;
 import com.pgmanagement.dto.request.CreateFloorRequest;
 import com.pgmanagement.dto.request.CreatePgRequest;
 import com.pgmanagement.dto.request.UpdateAdvanceBookingRequest;
+import com.pgmanagement.dto.request.UpdateOwnerProfileRequest;
 import com.pgmanagement.dto.response.*;
 import com.pgmanagement.entity.*;
 import com.pgmanagement.enums.BedStatus;
@@ -167,6 +168,84 @@ public class OwnerServiceImpl implements OwnerService {
         advanceBookingRepository.delete(booking);
         bed.setStatus(BedStatus.VACANT);
         bedRepository.save(bed);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public OwnerProfileResponse getProfile(String ownerId) {
+        Owner owner = ownerRepository.findById(ownerId)
+            .orElseThrow(() -> new ResourceNotFoundException("Owner", ownerId));
+        var pgOpt = pgHouseRepository.findByOwnerId(ownerId);
+        if (pgOpt.isEmpty()) {
+            return OwnerProfileResponse.builder()
+                .ownerId(owner.getId()).ownerName(owner.getName())
+                .email(owner.getEmail()).phone(owner.getPhone())
+                .memberSince(owner.getCreatedAt())
+                .build();
+        }
+        PgHouse pg = pgOpt.get();
+        List<Floor> floors = floorRepository.findByPgHouseIdOrderByNumberAsc(pg.getId());
+        long totalBeds = 0, occupied = 0, vacant = 0, advance = 0, totalRooms = 0;
+        for (Floor floor : floors) {
+            totalRooms += floor.getRooms().size();
+            for (Room room : floor.getRooms()) {
+                for (Bed bed : room.getBeds()) {
+                    totalBeds++;
+                    switch (bed.getStatus()) {
+                        case OCCUPIED -> occupied++;
+                        case VACANT -> vacant++;
+                        case ADVANCE_BOOKED -> advance++;
+                        default -> {}
+                    }
+                }
+            }
+        }
+        List<Object[]> counts = tenantRepository.countByPgIdGroupByStatus(pg.getId());
+        long active = counts.stream().filter(r -> r[0].toString().equals("ACTIVE")).mapToLong(r -> (Long) r[1]).sum();
+        long notice = counts.stream().filter(r -> r[0].toString().equals("NOTICE_PERIOD")).mapToLong(r -> (Long) r[1]).sum();
+        return OwnerProfileResponse.builder()
+            .ownerId(owner.getId()).ownerName(owner.getName())
+            .email(owner.getEmail()).phone(owner.getPhone())
+            .memberSince(owner.getCreatedAt())
+            .pgId(pg.getId()).pgName(pg.getName())
+            .pgAddress(pg.getAddress()).pgDescription(pg.getDescription())
+            .totalBeds(totalBeds).occupiedBeds(occupied)
+            .vacantBeds(vacant).advanceBeds(advance)
+            .activeTenants(active).noticePeriodTenants(notice)
+            .totalFloors(floors.size()).totalRooms(totalRooms)
+            .build();
+    }
+
+    @Override
+    @Transactional
+    public OwnerProfileResponse updateProfile(String ownerId, UpdateOwnerProfileRequest request) {
+        Owner owner = ownerRepository.findById(ownerId)
+            .orElseThrow(() -> new ResourceNotFoundException("Owner", ownerId));
+        owner.setName(request.getOwnerName());
+        owner.setPhone(request.getPhone());
+        ownerRepository.save(owner);
+        pgHouseRepository.findByOwnerId(ownerId).ifPresent(pg -> {
+            pg.setName(request.getPgName());
+            pg.setAddress(request.getPgAddress());
+            pg.setDescription(request.getPgDescription());
+            pgHouseRepository.save(pg);
+        });
+        return getProfile(ownerId);
+    }
+
+    @Override
+    @Transactional
+    public void deleteFloor(String floorId) {
+        Floor floor = floorRepository.findById(floorId)
+            .orElseThrow(() -> new ResourceNotFoundException("Floor", floorId));
+        boolean hasActiveTenants = floor.getRooms() != null && floor.getRooms().stream()
+            .flatMap(r -> r.getBeds().stream())
+            .flatMap(b -> b.getTenants().stream())
+            .anyMatch(t -> "ACTIVE".equals(t.getStatus().name()) || "NOTICE_PERIOD".equals(t.getStatus().name()));
+        if (hasActiveTenants) {
+            throw new BusinessException("Cannot delete a floor with active tenants");
+        }
+        floorRepository.deleteById(floorId);
     }
 
     // â"€â"€â"€ Mappers â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€

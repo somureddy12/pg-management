@@ -19,7 +19,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -28,6 +31,7 @@ public class TenantServiceImpl implements TenantService {
     private final TenantRepository tenantRepository;
     private final BedRepository bedRepository;
     private final RentBillRepository rentBillRepository;
+    private final AdvanceBookingRepository advanceBookingRepository;
 
     @Override
     @Transactional
@@ -36,6 +40,12 @@ public class TenantServiceImpl implements TenantService {
             .orElseThrow(() -> new ResourceNotFoundException("Bed", request.getBedId()));
         if (bed.getStatus() != BedStatus.VACANT && bed.getStatus() != BedStatus.ADVANCE_BOOKED) {
             throw new BusinessException("Bed " + bed.getBedLabel() + " is already occupied");
+        }
+        if (tenantRepository.existsActiveByPhoneExcluding(request.getPhone(), "")) {
+            throw new BusinessException("Phone number " + request.getPhone() + " is already registered to an active tenant");
+        }
+        if (tenantRepository.existsActiveByIdNumberExcluding(request.getIdNumber(), "")) {
+            throw new BusinessException(request.getIdType() + " number " + request.getIdNumber() + " is already registered to an active tenant");
         }
         Tenant tenant = Tenant.builder()
             .bed(bed).name(request.getName()).phone(request.getPhone()).email(request.getEmail())
@@ -57,6 +67,12 @@ public class TenantServiceImpl implements TenantService {
     public TenantResponse updateTenant(String id, UpdateTenantRequest request) {
         Tenant tenant = tenantRepository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("Tenant", id));
+        if (tenantRepository.existsActiveByPhoneExcluding(request.getPhone(), id)) {
+            throw new BusinessException("Phone number " + request.getPhone() + " is already registered to another active tenant");
+        }
+        if (tenantRepository.existsActiveByIdNumberExcluding(request.getIdNumber(), id)) {
+            throw new BusinessException(request.getIdType() + " number " + request.getIdNumber() + " is already registered to another active tenant");
+        }
         tenant.setName(request.getName());
         tenant.setPhone(request.getPhone());
         tenant.setEmail(request.getEmail());
@@ -113,11 +129,17 @@ public class TenantServiceImpl implements TenantService {
             ? tenantRepository.findByPgIdAndStatus(pgId, status)
             : tenantRepository.findByPgId(pgId);
 
+        if (tenants.isEmpty()) return List.of();
+
+        // Single batch query for latest bill per tenant — replaces N+1 individual queries
+        List<String> ids = tenants.stream().map(Tenant::getId).toList();
+        Map<String, RentBill> latestBillMap = rentBillRepository.findLatestBillPerTenant(ids)
+            .stream()
+            .collect(Collectors.toMap(rb -> rb.getTenant().getId(), rb -> rb));
+
         return tenants.stream().map(t -> {
-            // For list view, get only the latest bill
-            List<RentBill> bills = rentBillRepository.findByTenantIdOrderByYearDescMonthDesc(t.getId());
-            RentBill latest = bills.isEmpty() ? null : bills.get(0);
             TenantResponse r = mapToResponse(t, null);
+            RentBill latest = latestBillMap.get(t.getId());
             if (latest != null) {
                 r.setLatestBill(TenantResponse.RentBillSummary.builder()
                     .id(latest.getId()).month(latest.getMonth()).year(latest.getYear())
@@ -192,6 +214,18 @@ public class TenantServiceImpl implements TenantService {
     public List<TenantResponse> getNoticePeriodTenants(String pgId) {
         return tenantRepository.findByPgIdAndStatus(pgId, TenantStatus.NOTICE_PERIOD)
             .stream().map(t -> mapToResponse(t, null)).toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Map<String, Long> getStatusCounts(String pgId) {
+        List<Object[]> rows = tenantRepository.countByPgIdGroupByStatus(pgId);
+        Map<String, Long> counts = new HashMap<>();
+        for (Object[] row : rows) {
+            counts.put(((TenantStatus) row[0]).name(), (Long) row[1]);
+        }
+        counts.put("ADVANCE_BOOKED", advanceBookingRepository.countPendingByPgId(pgId));
+        return counts;
     }
 
     private TenantResponse mapToResponse(Tenant t, List<RentBill> bills) {

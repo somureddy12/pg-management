@@ -1,4 +1,5 @@
-import { Outlet, NavLink, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 
 const navItems = [
@@ -12,9 +13,23 @@ const navItems = [
 export default function TenantLayout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  useEffect(() => { setSidebarOpen(false); }, [location.pathname]);
+
   return (
     <div className="layout">
-      <aside className="sidebar">
+      <button className="sidebar-toggle" onClick={() => setSidebarOpen(o => !o)}>
+        {sidebarOpen ? '✕' : '☰'}
+      </button>
+
+      <div
+        className={`sidebar-overlay ${sidebarOpen ? 'open' : ''}`}
+        onClick={() => setSidebarOpen(false)}
+      />
+
+      <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
         <div className="sidebar-logo">
           <h2>🏠 PG Manager</h2>
           <p>Tenant Portal</p>
@@ -32,10 +47,18 @@ export default function TenantLayout() {
             <strong>{user?.name}</strong><br />
             <span style={{ color: 'var(--gray-400)' }}>{user?.phone}</span>
           </div>
-          <button className="btn btn-outline btn-sm" style={{ width: '100%', justifyContent: 'center' }} onClick={() => { logout(); navigate('/login'); }}>Sign Out</button>
+          <button className="btn btn-outline btn-sm" style={{ width: '100%', justifyContent: 'center' }}
+            onClick={() => { logout(); navigate('/login'); }}>
+            Sign Out
+          </button>
         </div>
       </aside>
-      <main className="main-content"><div className="page-content"><Outlet /></div></main>
+
+      <main className="main-content">
+        <div className="page-content">
+          <Outlet />
+        </div>
+      </main>
     </div>
   );
 }

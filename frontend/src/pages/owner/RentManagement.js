@@ -164,7 +164,7 @@ export default function RentManagement() {
       </div>
 
       {/* Summary stats */}
-      <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)', marginBottom: 20 }}>
+      <div className="stats-grid resp-grid-4" style={{ marginBottom: 20 }}>
         <div className="stat-card"><div className="stat-icon" style={{ background: 'var(--success-light)' }}>✅</div><div><div className="stat-value">{paidCount}</div><div className="stat-label">Paid</div></div></div>
         <div className="stat-card"><div className="stat-icon" style={{ background: 'var(--danger-light)' }}>❌</div><div><div className="stat-value">{unpaidCount}</div><div className="stat-label">Unpaid</div></div></div>
         <div className="stat-card"><div className="stat-icon" style={{ background: 'var(--warning-light)' }}>⚠️</div><div><div className="stat-value">{partialCount}</div><div className="stat-label">Partial</div></div></div>
@@ -243,25 +243,27 @@ export default function RentManagement() {
                     <td style={{ color: b.totalAmount - b.paidAmount > 0 ? 'var(--danger)' : 'var(--gray-500)' }}>
                       ₹{(b.totalAmount - b.paidAmount).toLocaleString()}
                     </td>
-                    <td style={{ display: 'flex', gap: 6 }}>
-                      {b.status === 'PAID' && (
-                        <button className="btn btn-outline btn-sm" onClick={async () => {
-                          try {
-                            const res = await api.get(`/rent/receipt/${b.id}`, { responseType: 'blob' });
-                            const url = URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
-                            const a = document.createElement('a');
-                            a.href = url;
-                            a.target = '_blank';
-                            a.rel = 'noopener noreferrer';
-                            document.body.appendChild(a);
-                            a.click();
-                            document.body.removeChild(a);
-                            setTimeout(() => URL.revokeObjectURL(url), 10000);
-                          } catch (err) { toast.error('Failed to load receipt: ' + (err.response?.status || err.message)); }
-                        }}>
-                          🧾 Receipt
-                        </button>
-                      )}
+                    <td>
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        {b.status === 'PAID' && (
+                          <button className="btn btn-outline btn-sm" onClick={async () => {
+                            try {
+                              const res = await api.get(`/rent/receipt/${b.id}`, { responseType: 'blob' });
+                              const url = URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
+                              const a = document.createElement('a');
+                              a.href = url;
+                              a.target = '_blank';
+                              a.rel = 'noopener noreferrer';
+                              document.body.appendChild(a);
+                              a.click();
+                              document.body.removeChild(a);
+                              setTimeout(() => URL.revokeObjectURL(url), 10000);
+                            } catch (err) { toast.error('Failed to load receipt: ' + (err.response?.status || err.message)); }
+                          }}>
+                            🧾 Receipt
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}

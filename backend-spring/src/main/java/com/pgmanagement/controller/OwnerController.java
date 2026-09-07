@@ -4,9 +4,11 @@ import com.pgmanagement.dto.request.AdvanceBookingRequest;
 import com.pgmanagement.dto.request.CreateFloorRequest;
 import com.pgmanagement.dto.request.CreatePgRequest;
 import com.pgmanagement.dto.request.UpdateAdvanceBookingRequest;
+import com.pgmanagement.dto.request.UpdateOwnerProfileRequest;
 import com.pgmanagement.dto.response.AdvanceBookingResponse;
 import com.pgmanagement.dto.response.DashboardResponse;
 import com.pgmanagement.dto.response.FloorResponse;
+import com.pgmanagement.dto.response.OwnerProfileResponse;
 import com.pgmanagement.dto.response.PgHouseResponse;
 import java.util.List;
 import com.pgmanagement.security.UserPrincipal;
@@ -73,6 +75,25 @@ public class OwnerController {
     public ResponseEntity<Void> deleteAdvanceBooking(@PathVariable String id) {
         ownerService.deleteAdvanceBooking(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/floor/{id}")
+    public ResponseEntity<Void> deleteFloor(@PathVariable String id) {
+        ownerService.deleteFloor(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/profile")
+    public ResponseEntity<OwnerProfileResponse> getProfile(
+            @AuthenticationPrincipal UserPrincipal principal) {
+        return ResponseEntity.ok(ownerService.getProfile(principal.getId()));
+    }
+
+    @PutMapping("/profile")
+    public ResponseEntity<OwnerProfileResponse> updateProfile(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @Valid @RequestBody UpdateOwnerProfileRequest request) {
+        return ResponseEntity.ok(ownerService.updateProfile(principal.getId(), request));
     }
 
     @GetMapping("/health")

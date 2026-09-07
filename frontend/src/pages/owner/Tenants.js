@@ -8,15 +8,35 @@ const STATUS_BADGE = {
   ADVANCE_BOOKED: 'badge-purple', DEFAULTER: 'badge-red'
 };
 
-const VALID_STATUSES = ['ACTIVE', 'NOTICE_PERIOD', 'ADVANCE_BOOKED', 'VACATED', 'DEFAULTER'];
+const VALID_STATUSES = ['ALL', 'ACTIVE', 'NOTICE_PERIOD', 'ADVANCE_BOOKED', 'VACATED', 'DEFAULTER'];
 
 const SHARING_LABEL = { 1: '1 - Single', 2: '2 - Double', 3: '3 - Triple', 4: '4 - Quadruple' };
+
+const TABS = [
+  { key: 'ALL', label: 'All' },
+  { key: 'ACTIVE', label: 'Active' },
+  { key: 'NOTICE_PERIOD', label: 'Notice Period' },
+  { key: 'ADVANCE_BOOKED', label: 'Advance Booked' },
+  { key: 'VACATED', label: 'Vacated' },
+  { key: 'DEFAULTER', label: 'Defaulter' },
+];
+
+function isAdvanceReturnable(vacateRequestDate, expectedVacate) {
+  if (!vacateRequestDate || !expectedVacate) return null;
+  const diff = (new Date(expectedVacate) - new Date(vacateRequestDate)) / (1000 * 60 * 60 * 24);
+  return diff >= 30;
+}
+
+function daysUntil(dateStr) {
+  if (!dateStr) return null;
+  return Math.ceil((new Date(dateStr) - new Date()) / (1000 * 60 * 60 * 24));
+}
 
 export default function Tenants() {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const filter = VALID_STATUSES.includes(searchParams.get('status'))
-    ? searchParams.get('status') : 'ACTIVE';
+    ? searchParams.get('status') : 'ALL';
   const floorFilter = searchParams.get('floor') || '';
   const sharingFilter = searchParams.get('sharing') || '';
 
@@ -26,11 +46,17 @@ export default function Tenants() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [editBooking, setEditBooking] = useState(null);
+  const [counts, setCounts] = useState({});
 
   useEffect(() => {
     api.get('/owner/pg').then(r => {
       setPg(r.data);
-      if (r.data?.id) load(r.data.id, filter);
+      if (r.data?.id) {
+        load(r.data.id, filter);
+        api.get(`/tenants/counts?pgId=${r.data.id}`)
+          .then(c => setCounts(c.data))
+          .catch(() => {});
+      }
     }).catch(() => setLoading(false));
   }, []);
 
@@ -40,7 +66,17 @@ export default function Tenants() {
 
   const load = (pgId, status) => {
     setLoading(true);
-    if (status === 'ADVANCE_BOOKED') {
+    if (status === 'ALL') {
+      Promise.all([
+        api.get(`/tenants?pgId=${pgId}&status=ACTIVE`),
+        api.get(`/tenants?pgId=${pgId}&status=NOTICE_PERIOD`),
+      ])
+        .then(([activeRes, noticeRes]) => {
+          setTenants([...activeRes.data, ...noticeRes.data]);
+        })
+        .catch(() => toast.error('Failed to load'))
+        .finally(() => setLoading(false));
+    } else if (status === 'ADVANCE_BOOKED') {
       api.get(`/owner/advance-bookings?pgId=${pgId}`)
         .then(r => setAdvanceBookings(r.data))
         .catch(() => toast.error('Failed to load'))
@@ -59,11 +95,8 @@ export default function Tenants() {
     setSearchParams(next);
   };
 
-  const handleFilter = (s) => {
-    setSearchParams({ status: s });
-  };
+  const handleFilter = (s) => setSearchParams({ status: s });
 
-  // Derive unique floor & sharing options from loaded tenants
   const floors = [...new Set(tenants.map(t => t.floorNumber).filter(Boolean))].sort((a, b) => a - b);
   const sharings = [...new Set(tenants.map(t => t.sharingType).filter(Boolean))].sort((a, b) => a - b);
 
@@ -75,18 +108,24 @@ export default function Tenants() {
   });
 
   const filteredAdvance = advanceBookings.filter(ab =>
-    ab.tenantName.toLowerCase().includes(search.toLowerCase()) ||
-    ab.phone.includes(search)
+    ab.tenantName.toLowerCase().includes(search.toLowerCase()) || ab.phone.includes(search)
   );
 
+  const allCount = (counts.ACTIVE || 0) + (counts.NOTICE_PERIOD || 0);
+  const tabCount = (key) => {
+    if (key === 'ALL') return allCount;
+    return counts[key] || 0;
+  };
+
   const hasExtraFilters = floorFilter || sharingFilter;
+  const displayCount = filter === 'ADVANCE_BOOKED' ? filteredAdvance.length : filtered.length;
 
   return (
     <div>
       <div className="page-header">
         <div>
           <h1 className="page-title">Tenants</h1>
-          <p className="page-subtitle">{filtered.length} {filter.toLowerCase().replace('_', ' ')} tenants</p>
+          <p className="page-subtitle">{displayCount} {filter === 'ALL' ? 'active & notice period' : filter.toLowerCase().replace('_', ' ')} tenants</p>
         </div>
         <Link to="/owner/tenants/add" className="btn btn-primary">+ Add Tenant</Link>
       </div>
@@ -94,10 +133,23 @@ export default function Tenants() {
       {/* Status tabs */}
       <div style={{ display: 'flex', gap: 12, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
         <div className="tabs" style={{ marginBottom: 0, borderBottom: 'none', gap: 4 }}>
-          {['ACTIVE', 'NOTICE_PERIOD', 'ADVANCE_BOOKED', 'VACATED', 'DEFAULTER'].map(s => (
-            <div key={s} className={`tab ${filter === s ? 'active' : ''}`} onClick={() => handleFilter(s)}
-              style={{ fontSize: 13, padding: '8px 14px' }}>
-              {s.replace('_', ' ')}
+          {TABS.map(({ key, label }) => (
+            <div
+              key={key}
+              className={`tab ${filter === key ? 'active' : ''}`}
+              onClick={() => handleFilter(key)}
+              style={{ fontSize: 13, padding: '8px 14px', display: 'flex', alignItems: 'center', gap: 6 }}
+            >
+              {label}
+              <span style={{
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                background: filter === key ? 'rgba(255,255,255,0.3)' : 'var(--gray-200)',
+                color: filter === key ? 'inherit' : 'var(--gray-600)',
+                borderRadius: 10, fontSize: 11, fontWeight: 700,
+                minWidth: 18, height: 18, padding: '0 5px',
+              }}>
+                {tabCount(key)}
+              </span>
             </div>
           ))}
         </div>
@@ -105,7 +157,7 @@ export default function Tenants() {
           onChange={e => setSearch(e.target.value)} style={{ maxWidth: 220, marginLeft: 'auto' }} />
       </div>
 
-      {/* Secondary filters — floor & sharing */}
+      {/* Secondary filters */}
       {filter !== 'ADVANCE_BOOKED' && (
         <div style={{ display: 'flex', gap: 10, marginBottom: 20, alignItems: 'center', flexWrap: 'wrap' }}>
           <select className="form-select" value={floorFilter} onChange={e => setParam('floor', e.target.value)}
@@ -125,15 +177,15 @@ export default function Tenants() {
               const next = Object.fromEntries(searchParams.entries());
               delete next.floor; delete next.sharing;
               setSearchParams(next);
-            }}>
-              Clear Filters ✕
-            </button>
+            }}>Clear Filters ✕</button>
           )}
         </div>
       )}
 
       <div className="card" style={{ padding: 0 }}>
-        {loading ? <div className="loading"><div className="spinner" /></div> : filter === 'ADVANCE_BOOKED' ? (
+        {loading ? (
+          <div className="loading"><div className="spinner" /></div>
+        ) : filter === 'ADVANCE_BOOKED' ? (
           filteredAdvance.length === 0 ? (
             <div className="empty-state"><p>No advance booked tenants found.</p></div>
           ) : (
@@ -162,22 +214,30 @@ export default function Tenants() {
                       <td>₹{ab.advancePaid?.toLocaleString()}</td>
                       <td style={{ fontSize: 13, color: 'var(--gray-500)' }}>{ab.notes || '—'}</td>
                       <td><span className="badge badge-purple">ADVANCE BOOKED</span></td>
-                      <td style={{ display: 'flex', gap: 6 }}>
-                        <button className="btn btn-outline btn-sm" onClick={() => setEditBooking(ab)}>Edit</button>
-                        <button className="btn btn-danger btn-sm" onClick={async () => {
-                          if (!window.confirm(`Delete advance booking for ${ab.tenantName}?`)) return;
-                          try {
-                            await api.delete(`/owner/advance-booking/${ab.id}`);
-                            toast.success('Booking deleted');
-                            setAdvanceBookings(prev => prev.filter(b => b.id !== ab.id));
-                          } catch { toast.error('Failed to delete'); }
-                        }}>Delete</button>
+                      <td>
+                        <div style={{ display: 'flex', gap: 6 }}>
+                          <button className="btn btn-outline btn-sm" onClick={() => setEditBooking(ab)}>Edit</button>
+                          <button className="btn btn-danger btn-sm" onClick={async () => {
+                            if (!window.confirm(`Delete advance booking for ${ab.tenantName}?`)) return;
+                            try {
+                              await api.delete(`/owner/advance-booking/${ab.id}`);
+                              toast.success('Booking deleted');
+                              setAdvanceBookings(prev => prev.filter(b => b.id !== ab.id));
+                            } catch { toast.error('Failed to delete'); }
+                          }}>Delete</button>
+                        </div>
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
+          )
+        ) : filter === 'ALL' ? (
+          filtered.length === 0 ? (
+            <div className="empty-state"><p>No active or notice period tenants found.</p></div>
+          ) : (
+            <AllTenantsTable tenants={filtered} />
           )
         ) : filtered.length === 0 ? (
           <div className="empty-state"><p>No tenants match the selected filters.</p></div>
@@ -249,6 +309,98 @@ export default function Tenants() {
           }}
         />
       )}
+    </div>
+  );
+}
+
+function AllTenantsTable({ tenants }) {
+  return (
+    <div className="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>Tenant</th>
+            <th>Room / Bed</th>
+            <th>Sharing</th>
+            <th>Join Date</th>
+            <th>Rent</th>
+            <th>This Month</th>
+            <th>Status</th>
+            <th>Vacate Date</th>
+            <th>Days Left</th>
+            <th>Advance (₹)</th>
+            <th>Refund?</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {tenants.map(t => {
+            const bill = t.latestBill;
+            const isNotice = t.status === 'NOTICE_PERIOD';
+            const days = isNotice ? daysUntil(t.expectedVacate) : null;
+            const returnable = isNotice ? isAdvanceReturnable(t.vacateRequestDate, t.expectedVacate) : null;
+            return (
+              <tr key={t.id}>
+                <td>
+                  <div style={{ fontWeight: 600 }}>{t.name}</div>
+                  <div style={{ fontSize: 12, color: 'var(--gray-500)' }}>{t.phone}</div>
+                  {t.email && <div style={{ fontSize: 11, color: 'var(--gray-400)' }}>{t.email}</div>}
+                </td>
+                <td>
+                  Room {t.roomNumber}, Bed {t.bedLabel}
+                  <br />
+                  <span style={{ fontSize: 12, color: 'var(--gray-500)' }}>Floor {t.floorNumber}</span>
+                </td>
+                <td style={{ fontSize: 13 }}>
+                  {t.sharingType ? (SHARING_LABEL[t.sharingType] || `${t.sharingType}-Sharing`) : '—'}
+                </td>
+                <td style={{ fontSize: 13 }}>{new Date(t.joinDate).toLocaleDateString('en-IN')}</td>
+                <td style={{ fontWeight: 600 }}>₹{t.monthlyRent?.toLocaleString()}</td>
+                <td>
+                  {bill ? (
+                    <span className={`badge ${bill.status === 'PAID' ? 'badge-green' : bill.status === 'PARTIAL' ? 'badge-yellow' : 'badge-red'}`}>
+                      {bill.status}
+                    </span>
+                  ) : <span className="badge badge-gray">No bill</span>}
+                </td>
+                <td>
+                  <span className={`badge ${STATUS_BADGE[t.status]}`}>
+                    {t.status === 'NOTICE_PERIOD' ? 'Notice' : t.status}
+                  </span>
+                </td>
+                <td style={{ fontSize: 13 }}>
+                  {isNotice && t.expectedVacate
+                    ? <span style={{ fontWeight: 600, color: days !== null && days <= 7 ? 'var(--danger)' : 'inherit' }}>
+                        {new Date(t.expectedVacate).toLocaleDateString('en-IN')}
+                      </span>
+                    : '—'}
+                </td>
+                <td style={{ fontSize: 13 }}>
+                  {isNotice && days !== null
+                    ? <span style={{
+                        fontWeight: 600,
+                        color: days <= 0 ? 'var(--danger)' : days <= 7 ? '#d97706' : 'var(--gray-700)',
+                      }}>
+                        {days <= 0 ? 'Overdue' : `${days}d`}
+                      </span>
+                    : '—'}
+                </td>
+                <td style={{ fontWeight: 700, color: '#7c3aed', fontSize: 13 }}>
+                  {isNotice ? `₹${t.securityDeposit?.toLocaleString() || 0}` : '—'}
+                </td>
+                <td>
+                  {isNotice
+                    ? returnable
+                      ? <span style={{ color: '#15803d', fontWeight: 700, fontSize: 13 }}>Yes</span>
+                      : <span style={{ color: '#b91c1c', fontWeight: 700, fontSize: 13 }}>No</span>
+                    : '—'}
+                </td>
+                <td><Link to={`/owner/tenants/${t.id}`} className="btn btn-outline btn-sm">View</Link></td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
     </div>
   );
 }

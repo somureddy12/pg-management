@@ -9,7 +9,10 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "advance_bookings")
+@Table(name = "advance_bookings",
+       indexes = {
+           @Index(name = "idx_advbooking_bed_status", columnList = "bed_id, status")
+       })
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class AdvanceBooking {
 

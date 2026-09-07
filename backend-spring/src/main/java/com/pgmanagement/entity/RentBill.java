@@ -13,7 +13,12 @@ import java.util.List;
 
 @Entity
 @Table(name = "rent_bills",
-       uniqueConstraints = @UniqueConstraint(columnNames = {"tenant_id", "month", "year"}))
+       uniqueConstraints = @UniqueConstraint(columnNames = {"tenant_id", "month", "year"}),
+       indexes = {
+           @Index(name = "idx_rentbill_tenant_year_month", columnList = "tenant_id, year, month"),
+           @Index(name = "idx_rentbill_year_month",        columnList = "year, month"),
+           @Index(name = "idx_rentbill_status_duedate",    columnList = "status, due_date")
+       })
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class RentBill {
 
@@ -22,7 +27,9 @@ public class RentBill {
     private String id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "tenant_id", nullable = false)
+    @JoinColumn(name = "tenant_id", nullable = false,
+                foreignKey = @ForeignKey(name = "fk_rentbill_tenant",
+                    foreignKeyDefinition = "FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE"))
     private Tenant tenant;
 
     @Column(nullable = false)

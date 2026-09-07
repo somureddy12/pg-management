@@ -14,12 +14,14 @@ import Tenants from './pages/owner/Tenants';
 import AddTenant from './pages/owner/AddTenant';
 import TenantDetail from './pages/owner/TenantDetail';
 import RentManagement from './pages/owner/RentManagement';
+import DayWiseTenants from './pages/owner/DayWiseTenants';
 import Communications from './pages/owner/Communications';
 import FoodMenu from './pages/owner/FoodMenu';
 import OwnerMeals from './pages/owner/Meals';
 import TenantMeals from './pages/tenant/Meals';
 import Reports from './pages/owner/Reports';
 import Expenses from './pages/owner/Expenses';
+import OwnerProfile from './pages/owner/Profile';
 
 // Tenant pages
 import TenantLayout from './components/tenant/TenantLayout';
@@ -60,12 +62,14 @@ function App() {
             <Route path="tenants" element={<Tenants />} />
             <Route path="tenants/add" element={<AddTenant />} />
             <Route path="tenants/:id" element={<TenantDetail />} />
+            <Route path="day-wise" element={<DayWiseTenants />} />
             <Route path="rent" element={<RentManagement />} />
             <Route path="communications" element={<Communications />} />
             <Route path="menu" element={<FoodMenu />} />
             <Route path="meals" element={<OwnerMeals />} />
             <Route path="reports" element={<Reports />} />
             <Route path="expenses" element={<Expenses />} />
+            <Route path="profile" element={<OwnerProfile />} />
           </Route>
 
           {/* Tenant routes */}

@@ -1,6 +1,7 @@
 package com.pgmanagement.controller;
 
 import com.pgmanagement.dto.request.CreateRoomRequest;
+import com.pgmanagement.dto.response.BedResponse;
 import com.pgmanagement.dto.response.RoomResponse;
 import com.pgmanagement.service.RoomService;
 import jakarta.validation.Valid;
@@ -10,6 +11,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/rooms")
@@ -44,6 +46,17 @@ public class RoomController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteRoom(@PathVariable String id) {
         roomService.deleteRoom(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PatchMapping("/beds/{bedId}")
+    public ResponseEntity<BedResponse> updateBed(@PathVariable String bedId, @RequestBody Map<String, String> updates) {
+        return ResponseEntity.ok(roomService.updateBed(bedId, updates));
+    }
+
+    @DeleteMapping("/beds/{bedId}")
+    public ResponseEntity<Void> deleteBed(@PathVariable String bedId) {
+        roomService.deleteBed(bedId);
         return ResponseEntity.noContent().build();
     }
 }

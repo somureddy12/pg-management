@@ -17,7 +17,9 @@ public class TenantMealDefault {
     private String id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "tenant_id", nullable = false)
+    @JoinColumn(name = "tenant_id", nullable = false,
+                foreignKey = @ForeignKey(name = "fk_mealdefault_tenant",
+                    foreignKeyDefinition = "FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE"))
     private Tenant tenant;
 
     @ManyToOne(fetch = FetchType.LAZY)

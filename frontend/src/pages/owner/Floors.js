@@ -17,6 +17,20 @@ export default function Floors() {
   const [showAddRoom, setShowAddRoom] = useState(null);
   const [selectedBed, setSelectedBed] = useState(null);
   const [bookingType, setBookingType] = useState(null); // 'advance' | 'tenant'
+  const [editRoom, setEditRoom] = useState(null);
+  const [confirmDelete, setConfirmDelete] = useState(null); // { type: 'room'|'floor', id, label }
+
+  const handleDeleteRoom = async (roomId) => {
+    try { await api.delete(`/rooms/${roomId}`); toast.success('Room deleted'); load(); }
+    catch { toast.error('Cannot delete room with active tenants'); }
+    setConfirmDelete(null);
+  };
+
+  const handleDeleteFloor = async (floorId) => {
+    try { await api.delete(`/owner/floor/${floorId}`); toast.success('Floor deleted'); load(); }
+    catch (err) { toast.error(err?.response?.data?.message || 'Cannot delete floor with active tenants'); }
+    setConfirmDelete(null);
+  };
 
   const load = () => {
     api.get('/owner/pg').then(r => setPg(r.data)).catch(() => toast.error('Failed to load'))
@@ -133,17 +147,42 @@ export default function Floors() {
               <span className="floor-stat">🛏️ {floor.rooms?.reduce((s, r) => s + r.beds.length, 0)} beds</span>
               <span className="floor-stat" style={{ color: '#86efac' }}>✅ {floor.rooms?.reduce((s, r) => s + r.beds.filter(b => getBedStatus(b) === 'vacant').length, 0)} vacant</span>
             </div>
-            <button className="btn btn-outline btn-sm" style={{ marginLeft: 'auto' }} onClick={() => setShowAddRoom(floor.id)}>+ Add Room</button>
+            <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+              <button className="btn btn-outline btn-sm" onClick={() => setShowAddRoom(floor.id)}>+ Add Room</button>
+              <button
+                className="btn btn-sm btn-outline"
+                title="Delete floor"
+                onClick={() => setConfirmDelete({ type: 'floor', id: floor.id, label: `Floor ${floor.number}${floor.label ? ` — ${floor.label}` : ''}` })}
+                style={{ borderColor: 'var(--danger)', color: 'var(--danger)' }}>
+                🗑️ Delete Floor
+              </button>
+            </div>
           </div>
           <div className="room-grid">
-            {floor.rooms?.map(room => (
+            {[...(floor.rooms || [])].sort((a, b) => a.roomNumber.localeCompare(b.roomNumber, undefined, { numeric: true })).map(room => (
               <div key={room.id} className="room-card">
                 <div className="room-header">
                   <div>
                     <div className="room-number">Room {room.roomNumber}</div>
                     <div className="room-type">{room.sharingType} Sharing · ₹{room.monthlyRent}/mo</div>
                   </div>
-                  <span className="badge badge-blue">{room.beds.filter(b => getBedStatus(b) === 'occupied').length}/{room.beds.length}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span className="badge badge-blue">{room.beds.filter(b => getBedStatus(b) === 'occupied').length}/{room.beds.length}</span>
+                    <button
+                      className="btn btn-sm btn-outline"
+                      title="Edit room & beds"
+                      onClick={e => { e.stopPropagation(); setEditRoom(room); }}
+                      style={{ padding: '4px 8px', lineHeight: 1 }}>
+                      ✏️
+                    </button>
+                    <button
+                      className="btn btn-sm btn-outline"
+                      title="Delete room"
+                      onClick={e => { e.stopPropagation(); setConfirmDelete({ type: 'room', id: room.id, label: `Room ${room.roomNumber}` }); }}
+                      style={{ padding: '4px 8px', lineHeight: 1, borderColor: 'var(--danger)', color: 'var(--danger)' }}>
+                      🗑️
+                    </button>
+                  </div>
                 </div>
                 <div className="bed-grid">
                   {room.beds.map(bed => {
@@ -169,6 +208,13 @@ export default function Floors() {
 
       {showAddFloor && <AddFloorModal pgId={pg.id} onClose={() => setShowAddFloor(false)} onSaved={load} />}
       {showAddRoom && <AddRoomModal floorId={showAddRoom} onClose={() => setShowAddRoom(null)} onSaved={load} />}
+      {editRoom && <EditRoomModal room={editRoom} onDone={() => { setEditRoom(null); load(); }} />}
+      {confirmDelete && (
+        <ConfirmDeleteModal
+          label={confirmDelete.label}
+          onConfirm={() => confirmDelete.type === 'room' ? handleDeleteRoom(confirmDelete.id) : handleDeleteFloor(confirmDelete.id)}
+          onClose={() => setConfirmDelete(null)} />
+      )}
       {selectedBed && bookingType === 'choose' && (
         <ChooseBookingModal bed={selectedBed}
           onAdvance={() => setBookingType('advance')}
@@ -178,6 +224,206 @@ export default function Floors() {
       {selectedBed && bookingType === 'advance' && (
         <AdvanceBookingModal bed={selectedBed} onClose={() => { setSelectedBed(null); setBookingType(null); }} onSaved={load} />
       )}
+    </div>
+  );
+}
+
+function ConfirmDeleteModal({ label, onConfirm, onClose }) {
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 380 }}>
+        <div className="modal-header">
+          <h3 className="modal-title">Delete {label}?</h3>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer' }}>×</button>
+        </div>
+        <div className="modal-body">
+          <p style={{ color: 'var(--gray-600)', margin: 0 }}>This action cannot be undone. Rooms or beds with active tenants cannot be deleted.</p>
+        </div>
+        <div className="modal-footer">
+          <button className="btn btn-outline" onClick={onClose}>Cancel</button>
+          <button className="btn btn-danger" onClick={onConfirm}>Delete</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function EditRoomModal({ room, onDone }) {
+  const [form, setForm] = useState({
+    roomNumber: room.roomNumber || '',
+    sharingType: room.sharingType || 2,
+    monthlyRent: room.monthlyRent || '',
+    amenities: room.amenities || '',
+  });
+  const [beds, setBeds] = useState(room.beds.map(b => ({ ...b, label: b.bedLabel })));
+  const [loading, setLoading] = useState(false);
+  const [bedLoading, setBedLoading] = useState({});
+  const [confirmBedDelete, setConfirmBedDelete] = useState(null);
+  const [sharingError, setSharingError] = useState('');
+
+  const occupiedCount = beds.filter(b =>
+    (b.tenants?.length > 0) || (b.advanceBookings?.length > 0)
+  ).length;
+
+  const validateSharing = (value) => {
+    const n = parseInt(value);
+    if (occupiedCount > 0 && n < occupiedCount) {
+      setSharingError(`Cannot reduce to ${n} — ${occupiedCount} bed${occupiedCount > 1 ? 's are' : ' is'} currently occupied`);
+    } else {
+      setSharingError('');
+    }
+  };
+
+  const saveRoom = async (e) => {
+    e.preventDefault();
+    const newSharing = parseInt(form.sharingType);
+    if (occupiedCount > 0 && newSharing < occupiedCount) {
+      toast.error(`Cannot set sharing to ${newSharing} — ${occupiedCount} bed${occupiedCount > 1 ? 's are' : ' is'} occupied`);
+      return;
+    }
+    setLoading(true);
+    try {
+      await api.patch(`/rooms/${room.id}`, {
+        roomNumber: form.roomNumber,
+        sharingType: newSharing,
+        monthlyRent: parseFloat(form.monthlyRent),
+        amenities: form.amenities.split(',').map(a => a.trim()).filter(Boolean),
+      });
+      toast.success('Room updated');
+      onDone();
+    } catch (err) {
+      toast.error(err?.response?.data?.message || 'Failed to update room');
+    } finally { setLoading(false); }
+  };
+
+  const saveBed = async (bed) => {
+    setBedLoading(p => ({ ...p, [bed.id]: true }));
+    try {
+      await api.patch(`/rooms/beds/${bed.id}`, { bedLabel: bed.label, status: bed.status });
+      toast.success(`Bed ${bed.label} updated`);
+    } catch { toast.error('Failed to update bed'); }
+    finally { setBedLoading(p => ({ ...p, [bed.id]: false })); }
+  };
+
+  const deleteBed = async (bedId) => {
+    setBedLoading(p => ({ ...p, [bedId]: true }));
+    try {
+      await api.delete(`/rooms/beds/${bedId}`);
+      setBeds(prev => prev.filter(b => b.id !== bedId));
+      toast.success('Bed deleted');
+    } catch (err) {
+      toast.error(err?.response?.data?.message || 'Cannot delete occupied bed');
+    } finally {
+      setBedLoading(p => ({ ...p, [bedId]: false }));
+      setConfirmBedDelete(null);
+    }
+  };
+
+  const isOccupied = (bed) => bed.tenants?.length > 0 || bed.advanceBookings?.length > 0;
+  const statusColor = { VACANT: 'var(--success)', OCCUPIED: 'var(--danger)', MAINTENANCE: 'var(--gray-400)', ADVANCE_BOOKED: 'var(--advance)' };
+
+  return (
+    <div className="modal-overlay" onClick={onDone}>
+      <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 560 }}>
+        <div className="modal-header">
+          <h3 className="modal-title">Edit Room {room.roomNumber}</h3>
+          <button onClick={onDone} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer' }}>×</button>
+        </div>
+        <form onSubmit={saveRoom}>
+          <div className="modal-body">
+            <p style={{ fontWeight: 600, marginBottom: 8, color: 'var(--gray-700)' }}>Room Details</p>
+            <div className="form-grid">
+              <div className="form-group">
+                <label className="form-label">Room Number</label>
+                <input className="form-input" value={form.roomNumber} onChange={e => setForm({ ...form, roomNumber: e.target.value })} required />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Sharing Type</label>
+                <select
+                  className="form-select"
+                  value={form.sharingType}
+                  onChange={e => { setForm({ ...form, sharingType: e.target.value }); validateSharing(e.target.value); }}
+                  style={{ borderColor: sharingError ? 'var(--danger)' : undefined }}>
+                  <option value={1}>Single</option>
+                  <option value={2}>Double</option>
+                  <option value={3}>Triple</option>
+                  <option value={4}>Four Sharing</option>
+                </select>
+                {sharingError && <p style={{ color: 'var(--danger)', fontSize: 12, margin: '4px 0 0' }}>{sharingError}</p>}
+              </div>
+            </div>
+            <div className="form-group">
+              <label className="form-label">Monthly Rent (₹)</label>
+              <input className="form-input" type="number" value={form.monthlyRent} onChange={e => setForm({ ...form, monthlyRent: e.target.value })} required />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Amenities (comma separated)</label>
+              <input className="form-input" placeholder="AC, WiFi, Attached Bath" value={form.amenities} onChange={e => setForm({ ...form, amenities: e.target.value })} />
+            </div>
+
+            <p style={{ fontWeight: 600, margin: '16px 0 8px', color: 'var(--gray-700)' }}>Beds</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {beds.map(bed => (
+                <div key={bed.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: 'var(--gray-50)', borderRadius: 8, border: '1px solid var(--gray-200)' }}>
+                  <div style={{ width: 10, height: 10, borderRadius: '50%', background: statusColor[bed.status] || 'var(--gray-300)', flexShrink: 0 }} />
+                  <input
+                    className="form-input"
+                    style={{ width: 80, padding: '4px 8px', fontSize: 13 }}
+                    value={bed.label}
+                    onChange={e => setBeds(prev => prev.map(b => b.id === bed.id ? { ...b, label: e.target.value } : b))}
+                  />
+                  <span style={{ fontSize: 12, color: 'var(--gray-500)', flex: 1 }}>
+                    {bed.tenants?.[0]?.name || bed.advanceBookings?.[0]?.tenantName || bed.status}
+                  </span>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                    <input
+                      type="checkbox"
+                      checked={bed.status === 'MAINTENANCE'}
+                      disabled={isOccupied(bed)}
+                      onChange={e => setBeds(prev => prev.map(b => b.id === bed.id ? { ...b, status: e.target.checked ? 'MAINTENANCE' : 'VACANT' } : b))}
+                    />
+                    Maintenance
+                  </label>
+                  <button type="button" className="btn btn-sm btn-outline" disabled={bedLoading[bed.id]}
+                    onClick={() => saveBed(bed)} style={{ padding: '4px 10px', fontSize: 12 }}>
+                    {bedLoading[bed.id] ? '...' : 'Save'}
+                  </button>
+                  <button type="button" disabled={isOccupied(bed) || bedLoading[bed.id]}
+                    onClick={() => setConfirmBedDelete(bed)}
+                    title={isOccupied(bed) ? 'Cannot delete occupied bed' : 'Delete bed'}
+                    style={{ background: 'none', border: 'none', cursor: isOccupied(bed) ? 'not-allowed' : 'pointer', fontSize: 16, opacity: isOccupied(bed) ? 0.3 : 1, padding: '2px 4px' }}>
+                    🗑️
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="modal-footer">
+            <button type="button" className="btn btn-outline" onClick={onDone}>Cancel</button>
+            <button type="submit" className="btn btn-primary" disabled={loading || !!sharingError}>
+              {loading ? 'Saving...' : 'Save Room'}
+            </button>
+          </div>
+        </form>
+
+        {confirmBedDelete && (
+          <div className="modal-overlay" onClick={() => setConfirmBedDelete(null)}>
+            <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 360 }}>
+              <div className="modal-header">
+                <h3 className="modal-title">Delete Bed {confirmBedDelete.label}?</h3>
+                <button onClick={() => setConfirmBedDelete(null)} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer' }}>×</button>
+              </div>
+              <div className="modal-body"><p style={{ color: 'var(--gray-600)', margin: 0 }}>This cannot be undone.</p></div>
+              <div className="modal-footer">
+                <button className="btn btn-outline" onClick={() => setConfirmBedDelete(null)}>Cancel</button>
+                <button className="btn btn-danger" disabled={bedLoading[confirmBedDelete.id]} onClick={() => deleteBed(confirmBedDelete.id)}>
+                  {bedLoading[confirmBedDelete.id] ? 'Deleting...' : 'Delete'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

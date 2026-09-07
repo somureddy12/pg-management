@@ -81,7 +81,7 @@ export default function OwnerDashboard() {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+      <div className="resp-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
         {/* Occupancy bar */}
         <div className="card">
           <div className="card-header"><h3 className="card-title">Occupancy Overview</h3></div>
@@ -107,13 +107,13 @@ export default function OwnerDashboard() {
                 <div key={t.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px', background: 'var(--gray-50)', borderRadius: 8 }}>
                   <div>
                     <div style={{ fontWeight: 600, fontSize: 14 }}>{t.name}</div>
-                    <div style={{ fontSize: 12, color: 'var(--gray-500)' }}>Room {t.bed.room.roomNumber}, Bed {t.bed.bedLabel}</div>
+                    <div style={{ fontSize: 12, color: 'var(--gray-500)' }}>Room {t.roomNumber}, Bed {t.bedLabel}</div>
                   </div>
                   <div style={{ textAlign: 'right' }}>
                     <div style={{ fontSize: 12, color: 'var(--danger)', fontWeight: 500 }}>
                       {new Date(t.expectedVacate).toLocaleDateString('en-IN')}
                     </div>
-                    <Link to={`/owner/rooms`} className="btn btn-outline btn-sm" style={{ marginTop: 4 }}>Book Bed</Link>
+                    <Link to={`/owner/tenants/add?bedId=${t.bedId}`} className="btn btn-outline btn-sm" style={{ marginTop: 4 }}>Book Bed</Link>
                   </div>
                 </div>
               ))}

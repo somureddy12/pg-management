@@ -13,4 +13,7 @@ public interface AdvanceBookingRepository extends JpaRepository<AdvanceBooking, 
 
     @Query("SELECT ab FROM AdvanceBooking ab WHERE ab.bed.room.floor.pgHouse.id = :pgId AND ab.status = 'PENDING'")
     List<AdvanceBooking> findPendingByPgId(String pgId);
+
+    @Query("SELECT COUNT(ab) FROM AdvanceBooking ab WHERE ab.bed.room.floor.pgHouse.id = :pgId AND ab.status = 'PENDING'")
+    long countPendingByPgId(String pgId);
 }

@@ -8,6 +8,7 @@ import com.pgmanagement.dto.response.TenantResponse;
 import com.pgmanagement.enums.TenantStatus;
 
 import java.util.List;
+import java.util.Map;
 
 public interface TenantService {
     TenantResponse addTenant(AddTenantRequest request);
@@ -22,4 +23,5 @@ public interface TenantService {
     void updateVacateRequest(String tenantId, TenantVacateRequestDto req);
     void cancelVacateRequest(String tenantId);
     List<TenantResponse> getNoticePeriodTenants(String pgId);
+    Map<String, Long> getStatusCounts(String pgId);
 }
